@@ -5,6 +5,8 @@
 """
 
 import os
+import shutil
+import subprocess
 
 import pytest
 
@@ -87,6 +89,56 @@ def test_license_is_mit(repo_root):
     with open(os.path.join(repo_root, "LICENSE"), "r", encoding="utf-8") as handle:
         head = handle.read(200)
     assert head.startswith("MIT License")
+
+
+def test_every_source_and_test_file_is_git_tracked(repo_root):
+    """.gitignore 的通配会悄悄吞掉源码包（写规则时实测：`ledger/` 会命中 src/**/ledger/）。
+
+    漏跟踪的文件在开发机上一切正常，只有全新 clone 才会 ImportError —— 所以这里直接拿
+    `git ls-files` 与工作树对账，并把误吞它的 ignore 规则一起报出来。
+    """
+    if shutil.which("git") is None:
+        pytest.skip("环境无 git")
+    if not os.path.isdir(os.path.join(repo_root, ".git")):
+        pytest.skip("不在 git 仓库内（例如只拷贝了源码树）")
+    proc = subprocess.run(
+        ["git", "-c", "core.quotepath=false", "ls-files"],
+        cwd=repo_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    tracked = set()
+    for line in proc.stdout.splitlines():
+        if line.strip():
+            tracked.add(line.strip().replace("/", os.sep))
+
+    untracked = []
+    for root_name in ("src", "tests"):
+        root = os.path.join(repo_root, root_name)
+        for dirpath, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]
+            for name in files:
+                if not name.endswith((".py", ".json")):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, name), repo_root)
+                if rel not in tracked:
+                    untracked.append(rel)
+    if not untracked:
+        return
+
+    probe = subprocess.run(
+        ["git", "check-ignore", "-v", "--"] + untracked,
+        cwd=repo_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    raise AssertionError(
+        "以下源码/测试文件未被 git 跟踪，新 clone 会缺件：%s\n误吞它们的 ignore 规则：%s"
+        % (untracked, probe.stdout.strip() or "（check-ignore 未命中，可能是未曾 add）")
+    )
 
 
 def test_no_binary_samples_without_ledger_entry(repo_root):
