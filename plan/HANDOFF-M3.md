@@ -11,7 +11,7 @@
 | 测试 | 271 项，py3.8.8 与 py3.12.10 各 271 collected / 271 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
 | 交付面 | 内置规则集 15 格**仍全 pending、仍无一个数字**；`data/raw` `data/truth` 演示数据逐字节未动（M2 只改了 `data/README.md` 这份文档） | `rmqc ruleset show` / `git status --porcelain data/raw data/truth`（应为空） |
 | 命令面 | `version/selfcheck/ruleset/ledger/import/bench generate/assess` 真跑；`aggregate/compare/bench run/report/gui` 返回 3 并指明里程碑 | `rmqc assess --year 2022` |
-| 评定通路实测 | 42 个"路段×年度"对象在夹具规则集下：**ok 28 / partial 8 / blocked 6**；复算误差 **0**（真值列 vs 台账通路逐字段比对）；贡献排序一致性 **1.00**（214 次重排比较全部一致） | 见本文件 §六 的实测脚本 `.tmp_m2/measure_m2.py` 思路（临时产物，不落脚本库） |
+| 评定通路实测 | 42 个"路段×年度"对象在夹具规则集下：**ok 28 / partial 8 / blocked 6**；复算误差 **0**（真值列 vs 台账通路逐字段比对）；贡献排序一致性 **1.00**（214 次重排比较全部一致） | 复算口径：全部对象入库后，用对应路面的夹具包逐个 `compute_segment_pci`，与按同一夹具包重生成的 `data/truth` 真值列比 `pci`/`grade`；排序口径：每条贡献清单逐位旋转 + 反序后重新 `expand_contributions` 比首序列。两条都已有常驻测试（`test_m2_assess.py`、`test_m2_trace.py`），临时脚本不入库 |
 | 拒算实测 | 内置包下 `assess` 对 4 个路段逐个 blocked、数值字段全空、退出码 1；M1 注入的负值/超范围/单位错共 6 个对象逐个 blocked（原因里引用校验层类别） | `py -3.8 -X utf8 -m pytest tests/test_m2_assess.py -q` |
 | 黄金用例 | 沥青 `SYN-G1` → PCI **87.7**、等级 良、扣分合计 12.3；水泥 `SYN-G2` → PCI **82.8**、partial、扣分合计 17.2（手算推导写在 `plan/05` §7.1） | `py -3.8 -X utf8 -m pytest tests/test_m2_pci_engine.py -k golden -q` |
 | 换算式落点 | `pci/engine.py`（六格必需系数 + 三类拒算门 + 舍入）、`pci/trace.py`（贡献折算 + 固定次级键 + 行号回指）；形态契约写在 `plan/05` §二 | `plan/05-评定与汇总算法说明.md` |
@@ -221,4 +221,15 @@ python -m road_mqi_checker selfcheck   # 入口等价性
 
 坑：`git clone` 取的是 **HEAD**，所以收尾提交必须先 commit 再验证；
 `py` 启动器会绕过 venv，激活后一律 `python -m pip`；venv 建在仓库里会让"交付面 = 已跟踪文件"
-那条门成为关键（`support_git.py` 就是为这件事写的）；M2 在这条回路上没发现新的闸门 bug。
+那条门成为关键（`support_git.py` 就是为这件事写的）。
+
+**M2 首轮已真跑（2026-10-07，新 clone + 新 venv，py3.12.10）**，逐条实测退出码：
+`version/selfcheck/ruleset show/ledger init` 全 0；`bench generate` 两次都 0 且
+`git status --porcelain data/` 空（幂等门成立）；`import S99-2022` = 1（有拒入行）、
+`import S99-2023` = 0；`assess --year 2022` = 1（4 个路段逐个 blocked）、
+`--segment S99-A1` = 1、`--json assess --year 2023` = 1 且 payload 结构完整
+（`counts`/`results[]`/`contributions[]` 用 `TRACE_COLUMNS`）；`python -m pytest tests -q` = 0，271 项全过；
+`python -m road_mqi_checker selfcheck` = 0（三个入口等价）。**本轮没有发现闸门自身的新环境 bug。**
+唯一要提醒下棒的：`rmqc` 控制台脚本在非 UTF-8 控制台输出的是 GBK 字节，
+把 stdout 重定向成文件再按 UTF-8 解析会报 `UnicodeDecodeError` —— 抓 JSON 时加 `PYTHONIOENCODING=utf-8`
+（README「已知环境问题」已记这条）。

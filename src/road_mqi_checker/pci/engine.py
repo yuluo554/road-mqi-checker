@@ -680,7 +680,3 @@ def summarize_status(results):
     for result in results:
         counts[result.status] = counts.get(result.status, 0) + 1
     return counts
-
-
-#: 拒算原因行里出现的状态词（报告与 GUI 用它决定是否显示"降级"横幅）
-DEGRADED_STATUSES = (res.STATUS_BLOCKED, res.STATUS_PARTIAL, res.STATUS_UNCOMPARABLE)
