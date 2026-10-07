@@ -7,9 +7,9 @@
 
 | 项 | 实测值 | 复核命令 |
 |---|---|---|
-| 提交 | 两个本地 commit（骨架 + 索引对账守门测试），工作树干净，**无 remote、未 push** | `git log --oneline -3` / `git status --porcelain` |
+| 提交 | 四个本地 commit（骨架 / git 索引对账门 / 收尾台账 / 开放项补充），工作树干净，**无 remote、未 push** | `git log --oneline -5` / `git status --porcelain` |
 | 测试 | 159 项，py3.8.8 与 py3.12.10 各 159 collected / 159 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
-| 全新 clone | `.tmp_verify/clone-m0` 下 159 全绿 + `selfcheck` 返回 0；`core.autocrlf=true` 环境下 CR 门通过（LF 声明生效） | `git clone . <目录>` 后照 README 跑 |
+| 全新 clone | 在 `.tmp_verify/` 临时目录 `git clone` 本仓库后双解释器 159 全绿 + `selfcheck` 返回 0；`core.autocrlf=true` 环境下 CR 门通过（LF 声明生效）。验证目录用完已删 | `git clone . <临时目录>` 后照 README 跑 |
 | 系数门 | 生效 0 格 / 拒算 15 格，`selfcheck` 如实报"系数门关" | `rmqc selfcheck` |
 | 命令面 | `version/selfcheck/ruleset/ledger` 真跑；其余 7 个命令返回退出码 3 并指明里程碑 | `rmqc assess --year 2025` |
 
@@ -27,7 +27,7 @@
 ## 一、当前进度（M0 已交付）
 
 - 文档：`plan/00`（索引重编号 + M0 决策记录回写）、`plan/01`（题目定稿，未改）、`plan/02-开发计划与架构.md`（选型/架构/模块映射/三态口径/CLI/守门测试清单/M0–M6 DoD/既定口径/开放项）、`data/README.md`（补 M0 落地对照与 `#N` 出处指针说明）；
-- 包骨架：`src/road_mqi_checker/` 30 个文件，核心零第三方依赖；
+- 包骨架：`src/road_mqi_checker/` 35 个文件（.py + rulesets JSON），核心零第三方依赖；仓库 `git ls-files` 共 67 份；
   - 口径层：`ruleset/status.py`（三态 + 夹具档）、`ruleset/loader.py`（schema 硬门 + 版本化选取）、`rulesets/base-jtg5210-2018.json`（15 格系数全 pending）；
   - 契约层：`results.py`（拒算契约）、`privacy.py`（合成数据白名单）、`data_paths.py`（五级优先级含冻结分支）、`exit_codes.py` + `errors.py`、`_meta.py`（占位符登记表）；
   - 结构层：`ledger/models.py`（字段契约）、`ledger/db.py`（7 张表 DDL，幂等建表）；
