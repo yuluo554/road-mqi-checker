@@ -145,8 +145,16 @@ rmqc gui --probe                                 # 桌面壳存活探针：建�
 python -m pytest                  # 守门测试
 ```
 
-免安装 exe（M6 之后提供）：双击 `road-mqi-checker.exe`，或在中立目录用同包的控制台 exe 跑
-`rmqc.exe selfcheck` / `rmqc.exe bench run`。
+免安装 exe（M6 已构建并实测，尚未随发布包提供——发布渠道要等授权后才开）：`packaging/rmqc.spec`
+一次构建产出 `dist/rmqc/rmqc.exe`（控制台，等价 `rmqc`）与 `dist/rmqc/rmqc-gui.exe`（双击即开桌面壳）。
+已实测的部分：把整包拷到仓库外的中立目录后，控制台 exe 跑通
+`selfcheck` / `ruleset list` / `ledger init` / `import` / `assess` / `aggregate` / `compare` /
+`report --format csv|md|docx`（内置系数包下按既有口径落 1），GUI exe 的 `--probe` 落 0；
+构建后红线断言（内嵌数据与仓库逐份 sha256 对账、无夹具字样、无真实形态标识符、无标准全文）全过。
+`bench run` 在打包态按设计落 **3**：包里没有 `tests/fixtures/`，夹具通路如实报"不可用"——
+这是"夹具值不进交付面"这条红线的后果，不是回归（见 `plan/07` §3.4）。
+**未实测的部分**：桌面壳的窗口交互（鼠标点选文件、拖窗、真实显示器上的观感）只到探针层级，
+需要人工在桌面环境过一遍；发布包（zip 资产）尚未上传到任何渠道。
 
 ### 命令与退出码
 
