@@ -11,10 +11,10 @@
 | 测试 | 213 项，py3.8.8 与 py3.12.10 各 213 collected / 213 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
 | 演示数据 | 已入仓为**冻结 fixtures**：`data/raw` 12 份检测表 + manifest（13 份）、`data/truth` 12 份真值；共 139 行 raw / 42 行 truth / 19 例注入 | `git ls-files data/` |
 | 位级一致 | 同 seed 重跑逐字节一致；`rmqc bench generate` 在内容一致时**不改写任何文件**（`files_changed=0`），换 seed 才需要 `--force` | `rmqc bench generate` 后 `git status --porcelain data/`（应为空） |
-| 实测指标 | 异常识别召回 **1.00（19/19）**、误报 **0.00（0/32 干净对象）**；校验结论 27 条 = 23 检出 + 4 未判定（全是闭合差） | `py -3.8 -X utf8 -m pytest tests/test_m1_pipeline.py -k "recall or false_alarm" -q` |
+| 实测指标 | 召回 **1.00**：格级 12/12（2 例证据是导入回执 `R008`，10 例是 finding）+ 划分变更标记 7/7；误报 **0.00（0/32）**：未被格级注入标记的 32 个对象上格级六类零检出（另有 6 条检出是声明过的隐含结论，不计误报）；校验结论 27 条 = 23 检出 + 4 未判定（全是闭合差） | `py -3.8 -X utf8 -m pytest tests/test_m1_pipeline.py -k "recall or false_alarm" -q`，口径全文见 `plan/03` §5.4 |
 | 命令面 | `version/selfcheck/ruleset/ledger/import/bench generate` 真跑；`assess/aggregate/compare/bench run/report/gui` 返回 3 并指明里程碑 | `rmqc assess --year 2025` |
 | 台账 schema | `schema_version = 2`：7 张表，`segment` 有 `lane_count` / `segment_width_m` / `panel_count` 三个可空列 | `rmqc selfcheck` / `rmqc ledger tables` |
-| 干净环境 | 新 clone + 新 venv（py3.12）按 README 逐条跑通：`pip install -U pip setuptools wheel` → `pip install -e .[dev]`（清华源 + NO_PROXY）→ `rmqc version/selfcheck/ruleset/ledger init` → `bench generate`（幂等，`git status data/` 为空）→ `import` 有拒入行 = 1 → `import --dry-run` = 0 → `assess` = 3 → `pytest` 全绿 → `python -m road_mqi_checker selfcheck` = 0。首轮跑出**三条闸门自身的环境 bug**，已修并补回归（见 §〇 教训 4） | `.tmp_*/clean_env.sh`，脚本化步骤见 §六 |
+| 干净环境 | 新 clone + 新 venv（py3.12）按 README 逐条跑通：`pip install -U pip setuptools wheel` → `pip install -e .[dev]`（清华源 + `NO_PROXY="*"`）→ `rmqc version/selfcheck/ruleset/ledger init` → `bench generate`（幂等，`git status --porcelain data/` 为空）→ `import` 有拒入行 = 1 → `--dry-run` = 0 → `assess` = 3 → `pytest` 213 全绿 → `python -m road_mqi_checker selfcheck` = 0。首轮跑出**三条闸门自身的环境 bug**，已修并补回归（见 §〇 教训 4） | 复现步骤见本文件 §六末尾；验证是一次性动作，产物不落脚本（`.tmp_*/` 会被清） |
 
 三条留给下一棒的实测教训：
 
@@ -176,3 +176,26 @@ python -c "import sqlite3; c=sqlite3.connect('ledger.sqlite'); print(c.execute('
 
 已安装包名 `road-mqi-checker`，入口 `rmqc` / `road-mqi-checker` / `python -m road_mqi_checker` 三者等价。
 字段口径与真值语义一律看 `plan/03-数据字典与合成数据.md`，代码是单点定义、文档只引用。
+
+### 干净环境验证的复现步骤（每棒收尾都要真跑一次，别只走流程）
+
+```bash
+WORK=.tmp_verify_m2 && rm -rf "$WORK" && mkdir -p "$WORK"
+git clone . "$WORK/repo" && cd "$WORK/repo"
+py -3.12 -m venv .venv && source .venv/Scripts/activate
+export NO_PROXY="*" no_proxy="*"
+python -m pip install -U pip setuptools wheel -i https://pypi.tuna.tsinghua.edu.cn/simple
+python -m pip install -e ".[dev]" -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+rmqc selfcheck && rmqc ruleset show && rmqc --db ledger.sqlite ledger init
+rmqc bench generate                    # 期望 0，且 git status --porcelain data/ 为空
+rmqc --db ledger.sqlite import --file data/raw/S99-2022.csv --year 2022   # 期望 1（有拒入行）
+rmqc --db ledger.sqlite import --file data/raw/S99-2023.csv --year 2023   # 期望 0
+rmqc assess --year 2022                # 期望 3（M2 交付后变 0/1）
+python -m pytest tests -q              # 期望全绿、0 skip
+python -m road_mqi_checker selfcheck   # 入口等价性
+```
+
+坑：`git clone` 取的是 **HEAD**，所以收尾提交必须先 commit 再验证；
+`py` 启动器会绕过 venv，激活后一律 `python -m pip`；venv 建在仓库里会让"交付面 = 已跟踪文件"
+那条门成为关键（`support_git.py` 就是为这件事写的）。
