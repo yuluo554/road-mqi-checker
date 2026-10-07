@@ -18,7 +18,8 @@ from road_mqi_checker.ruleset import loader
 def _walk_files(root, suffixes):
     out = []
     for dirpath, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", ".tmp_verify", "build", "dist")]
+        # .tmp_* 是本工程约定的会话内临时产物目录（已 gitignore，字节门与扫描都跳过）
+        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "build", "dist") and not d.startswith(".tmp_")]
         for name in files:
             if name.endswith(suffixes):
                 out.append(os.path.join(dirpath, name))
@@ -66,10 +67,16 @@ def test_disclaimer_states_auxiliary_positioning():
 
 
 def test_readme_declares_skeleton_status(repo_root):
-    """README 不许在项目未做完时自称可用：状态行与未实现清单必须都在。"""
+    """README 不许在项目未做完时自称可用：状态行跟随当前里程碑，未实现清单必须还在。
+
+    断言用 `_meta.MILESTONE` 而不是写死 "M0"，否则每交付一个里程碑都要回来改这条测试，
+    而那种"顺手把测试改成能过"正是文档与代码漂移的入口。
+    """
+    from road_mqi_checker import _meta
+
     with open(os.path.join(repo_root, "README.md"), "r", encoding="utf-8") as handle:
         text = handle.read()
-    assert "M0" in text
+    assert _meta.MILESTONE in text, "README 状态行没写当前里程碑 %s" % _meta.MILESTONE
     assert "未实现" in text or "尚未实现" in text
     for section in ("快速开始", "限制", "免责声明", "评测"):
         assert section in text, "README 缺章节：%s" % section

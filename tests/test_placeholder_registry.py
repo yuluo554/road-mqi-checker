@@ -156,8 +156,9 @@ def test_milestone_docs_are_declared():
         assert os.path.isabs(_meta.MILESTONE_DOCS[milestone]) is False, "文档路径要写成仓库相对路径"
 
 
-def test_current_milestone_is_m0():
-    assert _meta.MILESTONE == "M0"
+def test_current_milestone_matches_delivered_work():
+    """M1 数据先行已交付：生成器、导入器、八类校验都真跑，里程碑指针随之前进。"""
+    assert _meta.MILESTONE == "M1"
 
 
 def test_placeholder_message_is_actionable():
@@ -185,11 +186,14 @@ def test_no_ghost_modules_in_package():
         "ledger",
         "ledger.models",
         "ledger.db",
+        "ledger.importer",
+        "ledger.checks",
         "report",
         "report.disclaimer",
         "gui",
         "bench",
         "bench.rng",
+        "bench.generator",
         "bench.evaluation",
     }
     for dirpath, _dirs, files in os.walk(package_dir):

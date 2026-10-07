@@ -1,0 +1,4 @@
+# data_class=SYNTHETIC
+segment_id,route_id,year,surface_type,pci_truth,grade_truth,mqi_partial_truth,recommended_action_truth,injected_issue,injected_field
+X990-B1,X990,2024,cement,"pending:coeff=deduct_ratio.cement_distress,pci_component.ride_quality,pci_component.rutting,pci_component.skid_resistance,pci_weight.cement",pending:coeff=grade_threshold.pci,pending:coeff=mqi_weight.pavement,pending:coeff=action_rule.maintenance_trigger,duplicate_import,row
+X990-B23,X990,2024,cement,"pending:coeff=deduct_ratio.cement_distress,pci_component.ride_quality,pci_component.rutting,pci_component.skid_resistance,pci_weight.cement",pending:coeff=grade_threshold.pci,pending:coeff=mqi_weight.pavement,pending:coeff=action_rule.maintenance_trigger,partition_change,segment_id

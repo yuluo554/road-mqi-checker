@@ -1,0 +1,5 @@
+# data_class=SYNTHETIC
+segment_id,route_id,year,surface_type,pci_truth,grade_truth,mqi_partial_truth,recommended_action_truth,injected_issue,injected_field
+Y999-C1,Y999,2023,asphalt,"pending:coeff=deduct_ratio.asphalt_distress,pci_component.ride_quality,pci_component.rutting,pci_component.skid_resistance,pci_weight.asphalt",pending:coeff=grade_threshold.pci,pending:coeff=mqi_weight.pavement,pending:coeff=action_rule.maintenance_trigger,none,
+Y999-C2,Y999,2023,asphalt,"pending:coeff=deduct_ratio.asphalt_distress,pci_component.ride_quality,pci_component.rutting,pci_component.skid_resistance,pci_weight.asphalt",pending:coeff=grade_threshold.pci,pending:coeff=mqi_weight.pavement,pending:coeff=action_rule.maintenance_trigger,none,
+Y999-C3,Y999,2023,asphalt,"pending:coeff=deduct_ratio.asphalt_distress,pci_component.ride_quality,pci_component.rutting,pci_component.skid_resistance,pci_weight.asphalt",pending:coeff=grade_threshold.pci,pending:coeff=mqi_weight.pavement,pending:coeff=action_rule.maintenance_trigger,none,

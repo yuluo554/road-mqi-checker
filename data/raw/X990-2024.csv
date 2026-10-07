@@ -1,0 +1,10 @@
+# data_class=SYNTHETIC
+year,route_id,route_name,admin_grade,tech_grade,route_start_stake,route_end_stake,adcode,segment_id,segment_name,seg_start_stake,seg_end_stake,surface_type,lane_count,segment_width_m,panel_count,rqi,rut_depth_mm,skid_indicator,skid_indicator_kind,report_no,detect_org,distress_type,severity,quantity,quantity_unit,lane_no,note
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B1,SYN-X990B1段 K0+000～K4+000,K0+000,K4+000,cement,2,9.0,380,71.5,,93.3,SFC,SYN-LG-2024-0001,某某养护中心第 3 分部,板边剥落,中,6.4,m,2,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B1,SYN-X990B1段 K0+000～K4+000,K0+000,K4+000,cement,2,9.0,380,71.5,,93.3,SFC,SYN-LG-2024-0001,某某养护中心第 3 分部,板角断裂,重,2.0,块,1,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B1,SYN-X990B1段 K0+000～K4+000,K0+000,K4+000,cement,2,9.0,380,71.5,,93.3,SFC,SYN-LG-2024-0001,某某养护中心第 3 分部,裂缝,轻,18.0,m,2,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B1,SYN-X990B1段 K0+000～K4+000,K0+000,K4+000,cement,2,9.0,380,71.5,,93.3,SFC,SYN-LG-2024-0001,某某养护中心第 3 分部,裂缝,轻,18.0,m,2,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B23,SYN-X990B23段 K4+000～K10+000,K4+000,K10+000,cement,2,9.0,480,94.0,,67.4,SFC,SYN-LG-2024-0002,某某养护中心第 3 分部,坑洞,重,31.0,块,2,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B23,SYN-X990B23段 K4+000～K10+000,K4+000,K10+000,cement,2,9.0,480,94.0,,67.4,SFC,SYN-LG-2024-0002,某某养护中心第 3 分部,破碎板,中,27.0,块,2,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B23,SYN-X990B23段 K4+000～K10+000,K4+000,K10+000,cement,2,9.0,480,94.0,,67.4,SFC,SYN-LG-2024-0002,某某养护中心第 3 分部,错台,重,8.0,块,2,
+2024,X990,SYN-临假水泥线,三级,三级,K0+000,K10+000,990102,X990-B23,SYN-X990B23段 K4+000～K10+000,K4+000,K10+000,cement,2,9.0,480,94.0,,67.4,SFC,SYN-LG-2024-0002,某某养护中心第 3 分部,错台,重,8.0,块,1,

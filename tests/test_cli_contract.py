@@ -75,12 +75,14 @@ def test_selfcheck_fails_when_data_dir_missing(run_cli, tmp_path, monkeypatch):
 
 
 def test_placeholder_commands_return_unimplemented(run_cli):
+    """M1 之后仍未实现的命令必须返回 3 并指明里程碑（不许假成功）。
+
+    M1 已交付的 `import` 与 `bench generate` 不在此列，见 test_m1_cli.py。
+    """
     for argv in (
-        ["import", "--file", "x.csv", "--year", "2025"],
         ["assess", "--year", "2025"],
         ["aggregate", "--year", "2025"],
         ["compare", "--from-year", "2024", "--to-year", "2025"],
-        ["bench", "generate"],
         ["bench", "run"],
         ["report", "--out", "x.csv"],
     ):

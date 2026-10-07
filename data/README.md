@@ -44,7 +44,7 @@
 | DOI / 文献 | 保留前缀 | `10.9999/SYN.0001` |
 | 日期 | 允许虚构年度（如 2021～2026 评定年度） | — |
 
-真值文件约定（M1 落地）：
+真值文件约定（M1 落地，列名以 `bench/generator.py` 的 `TRUTH_COLUMNS` 为唯一事实源）：
 
 ```
 segment_id, route_id, year, surface_type,
@@ -52,10 +52,27 @@ pci_truth, grade_truth, mqi_partial_truth, recommended_action_truth,
 injected_issue, injected_field
 ```
 
-- `surface_type ∈ {asphalt, cement}`；
+- `surface_type ∈ {asphalt, cement}`；破损类型与程度字典见 `plan/03` §二（代码落点 `ledger/models.py`）；
 - `injected_issue ∈ {gap_chain, overlap_chain, partition_change, negative_value, out_of_range, unit_error, duplicate_import, none}`；
-- 真值由生成器按**自算公式**（非人工填写）输出，公式与 `plan/05-评定与汇总算法说明.md` 一致，保证"数据错→检出"和"分数算得对"两类真值同源可复算；
+- **评分四列现在一律是 `pending:coeff=<系数key>` 令牌**：内置规则集 15 格系数全为待核对，
+  "未核对不出数"对真值同样成立。真值里凭记忆填一个 PCI 等于给基准装假答案。
+  数值真值的唯一入口是 `generator._numeric_truth_probe` —— 系数核对完（M3）且评定引擎就位（M2）后，
+  同一 seed 重跑这四列自动变成数值，且数值**来自评定引擎本身**，不在生成器里另写一套扣分公式，
+  保证"数据错→检出"和"分数算得对"两类真值同源可复算；
+- 注入用例是声明的常量（`generator.INJECTIONS` / `PARTITION_PLAN`），不随 seed 漂移；
+  同一注入隐含的其余结论见 `generator.INJECTION_IMPLICATIONS`，不在真值里手工再写一份；
 - 生成器必须支持固定随机种子（基准可复现的前提），随机源只能是 `src/road_mqi_checker/bench/rng.py` 的 splitmix64。
+
+数据类别纪律（M1 落地，与 `ledger/importer.py` 的 `DATA_CLASSES` 同步）：
+
+| 类别 | 触发方式 | 白名单是否强制 |
+|---|---|---|
+| `SYNTHETIC` | 文件首行标记 `# data_class=SYNTHETIC` | **强制**：真实形态标识符逐行拒入（拒因 `R010_PRIVACY_WHITELIST`） |
+| `user` | 导入时 `--data-class user` 显式声明，且文件无标记 | 不施加：这是用户自己的真实检测台账，本工具的用途就是管它 |
+
+- 无标记又无声明 → 拒读（退出码 2）；标记与声明冲突 → 也拒读，不做静默降级；
+- 理由：白名单是**演示数据**的红线（本题不许出现真实路线/行政代码/号段），不是把工具锁死到不能管真实账；
+  但"是不是演示数据"必须由数据自己声明，不能靠读侧猜。
 
 > 本文件 §一 的表格行号 `#N` 是系数的**出处指针**：内置规则集每格系数的 `register_ref` 写成
 > `data/README.md#N`，由 `tests/test_ruleset_builtin.py` 校验该行存在且内容确实提到所引用的标准。
@@ -78,14 +95,18 @@ data/
 `data/standards/*.pdf` 已在 `.gitignore` 中排除，避免版权风险；`data/raw/real_*` 亦排除，
 真实检测数据不得进仓库。会话内查证与验证的临时产物只落 `.tmp_*/`（已被忽略且字节门跳过）。
 
-## 五、M0 骨架落地对照（2026-10-07）
+## 五、落地对照（截至 M1，2026-10-07）
 
 | 本文件的约定 | 代码落点 | 由哪条测试守住 |
 |---|---|---|
 | 三态核对状态 | `ruleset/status.py`（`pending/located/verified` + 夹具档 `fixture`） | `tests/test_ruleset_status.py` |
 | 每格系数登记来源 | `rulesets/base-jtg5210-2018.json` 的 `basis` + `register_ref` | `tests/test_ruleset_builtin.py` |
-| 真值文件列约定 | `bench/generator.py` 的 `TRUTH_COLUMNS`（单点定义） | 待 M1 的"生成器位级一致 + 真值对账"测试 |
-| `injected_issue` 词汇 | `ledger/models.py` 的 `INJECTED_ISSUES` | `tests/test_ledger_structure.py` |
-| 白名单形式 | `privacy.py` 的 `PATTERNS` + `WHITELIST_HINTS` | `tests/test_privacy_whitelist.py` |
-| 固定随机种子 | `bench/rng.py` splitmix64 + 冻结向量 | `tests/test_determinism_rng.py` |
-| 未核对不进评定路径 | `results.py` 拒算契约 + `cli` 系数门 | `tests/test_results_contract.py`、`tests/test_cli_contract.py` |
+| 真值文件列约定 | `bench/generator.py` 的 `TRUTH_COLUMNS`（单点定义） | `tests/test_m1_generator.py`（位级一致 + manifest 自描述） |
+| 真值评分四列不出数 | `generator._score_truth` + `_numeric_truth_probe` | `test_truth_score_columns_refuse_to_emit_numbers` |
+| `injected_issue` 词汇 | `ledger/models.py` 的 `INJECTED_ISSUES` | `test_each_injected_issue_has_at_least_two_cases` |
+| 白名单形式 | `privacy.py` 的 `PATTERNS` + `WHITELIST_HINTS` | `tests/test_privacy_whitelist.py`、`test_committed_data_identifiers_all_pass_the_whitelist` |
+| 数据类别（SYNTHETIC / user） | `ledger/importer.py` 的 `DATA_CLASSES` + 文件首行标记 | `test_unmarked_file_refuses_without_declaration`、`test_mark_conflicting_with_declaration_is_refused` |
+| 固定随机种子 | `bench/rng.py` splitmix64 + 冻结向量 | `tests/test_determinism_rng.py`、`test_injections_are_seed_independent` |
+| 未核对不进评定路径 | `results.py` 拒算契约 + `cli` 系数门 + `checks` 的 `undetermined` 档 | `tests/test_results_contract.py`、`test_length_closure_never_hard_judges_while_pending` |
+| 破损字典（类型×程度×量纲） | `ledger/models.py` 的 `DISTRESS_DICTIONARY`（口径见 `plan/03` §二） | `test_distress_dictionary_is_clean_in_frozen_data_but_catches_intruders` |
+| 演示数据入仓形态 | `data/raw/*.csv` + `data/truth/*.truth.csv` + `data/raw/manifest.json` | `test_regeneration_of_committed_fixtures_is_byte_identical`、`test_manifest_digests_match_committed_fixtures` |

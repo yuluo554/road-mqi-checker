@@ -1,0 +1,10 @@
+# data_class=SYNTHETIC
+year,route_id,route_name,admin_grade,tech_grade,route_start_stake,route_end_stake,adcode,segment_id,segment_name,seg_start_stake,seg_end_stake,surface_type,lane_count,segment_width_m,panel_count,rqi,rut_depth_mm,skid_indicator,skid_indicator_kind,report_no,detect_org,distress_type,severity,quantity,quantity_unit,lane_no,note
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C1,SYN-Y999C1段 K0+000～K4+000,K0+000,K4+000,asphalt,1,7.5,,77.4,8.9,93.2,SFC,SYN-LG-2022-0001,虚拟路况检测中心,泛油,重,11.0,m2,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C1,SYN-Y999C1段 K0+000～K4+000,K0+000,K4+000,asphalt,1,7.5,,77.4,8.9,93.2,SFC,SYN-LG-2022-0001,虚拟路况检测中心,波浪,重,170.9,m2,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C1,SYN-Y999C1段 K0+000～K4+000,K0+000,K4+000,asphalt,1,7.5,,77.4,8.9,93.2,SFC,SYN-LG-2022-0001,虚拟路况检测中心,纵向裂缝,轻,-30.0,m,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C2,SYN-Y999C2段 K4+200～K6+500,K4+200,K6+500,asphalt,1,7.5,,77.4,1.6,54.3,SFC,SYN-LG-2022-0002,虚拟路况检测中心,斜向裂缝,中,9.0,m,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C2,SYN-Y999C2段 K4+200～K6+500,K4+200,K6+500,asphalt,1,7.5,,77.4,1.6,54.3,SFC,SYN-LG-2022-0002,虚拟路况检测中心,网状裂缝,中,8.8,m2,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C2,SYN-Y999C2段 K4+200～K6+500,K4+200,K6+500,asphalt,1,7.5,,77.4,1.6,54.3,SFC,SYN-LG-2022-0002,虚拟路况检测中心,网状裂缝,重,105.7,m2,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C3,SYN-Y999C3段 K6+500～K9+000,K6+500,K9+000,asphalt,1,7.5,,74.1,7.9,43.3,SFC,SYN-LG-2022-0003,虚拟路况检测中心,坑槽,轻,3.2,m2,1,
+2022,Y999,SYN-延长试验线,二级,二级,K0+000,K9+000,990103,Y999-C3,SYN-Y999C3段 K6+500～K9+000,K6+500,K9+000,asphalt,1,7.5,,74.1,7.9,43.3,SFC,SYN-LG-2022-0003,虚拟路况检测中心,松散,重,59.0,m2,1,

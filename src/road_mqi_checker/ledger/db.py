@@ -1,18 +1,22 @@
 """SQLite 台账：建表、元信息、连接。
 
-结构层属 M0（现在就建得起来），入库与校验逻辑属 M1。
+结构层属 M0（现在就建得起来），入库与校验逻辑在 M1 落地（`ledger.importer` / `ledger.checks`）。
 
 两点刻意的设计：
 1. 表里不加 CHECK(quantity >= 0) 之类的约束 —— 负值/超范围/单位错是**要入库并被检出**
    的对象，被数据库拒掉就丢掉了"导入回执 + 异常识别召回"这条主证据链；
 2. 表不带 created_at/updated_at 默认时间戳 —— 基准产物要求两次运行逐字节一致，
    时钟进表就会永远对不齐（回执里记录的是"来源文件 + 行号"，不是时间）。
+
+schema v2（M1）：`segment` 增加 lane_count / segment_width_m / panel_count 三个可空列。
+理由是"破损数量的几何上界"（超范围检出的判据）与水泥路面按板数扣分都必须能从台账本身复算，
+不能只活在 CSV 里；三列可空，缺就判"未判定"而不是判合格。
 """
 
 import sqlite3
 from typing import List, Tuple
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 META_SCHEMA_KEY = "schema_version"
 
 #: 建表顺序固定（决定 sqlite_master 里的顺序，位级复现的前提之一）
@@ -55,6 +59,9 @@ DDL = (
             end_stake_m    INTEGER NOT NULL,
             surface_type   TEXT NOT NULL,
             note           TEXT,
+            lane_count     INTEGER,
+            segment_width_m REAL,
+            panel_count    INTEGER,
             PRIMARY KEY (segment_id, year)
         )
         """,

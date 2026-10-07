@@ -14,9 +14,11 @@ from road_mqi_checker._meta import MILESTONE, PLACEHOLDER_MILESTONES, __version_
 from road_mqi_checker.bench import evaluation
 from road_mqi_checker.data_paths import find_data_dir
 from road_mqi_checker.errors import InputUnavailable, RmqcError
-from road_mqi_checker.exit_codes import EXIT_OK
+from road_mqi_checker.exit_codes import EXIT_DEGRADED, EXIT_OK
 from road_mqi_checker.gui import app as gui_app
+from road_mqi_checker.ledger import checks as ledger_checks
 from road_mqi_checker.ledger import db as ledger_db
+from road_mqi_checker.ledger import importer
 from road_mqi_checker.mqi import engine as mqi_engine
 from road_mqi_checker.report import exporters
 from road_mqi_checker.ruleset import loader as ruleset_loader
@@ -46,10 +48,17 @@ def build_parser():
     ledger_p = sub.add_parser("ledger", help="台账建库与结构检查")
     ledger_p.add_argument("action", choices=["init", "tables"])
 
-    import_p = sub.add_parser("import", help="年度检测表入库（M1）")
+    import_p = sub.add_parser("import", help="年度检测表入库 + 导入回执 + 八类确定性校验")
     import_p.add_argument("--file", required=True)
     import_p.add_argument("--year", required=True, type=int)
     import_p.add_argument("--dry-run", action="store_true", help="只预检不落库")
+    import_p.add_argument(
+        "--data-class",
+        default=None,
+        dest="data_class",
+        choices=list(importer.DATA_CLASSES),
+        help="数据类别声明：SYNTHETIC 受白名单约束，user 是你自己的真实台账；文件头有标记时以此为准",
+    )
 
     assess_p = sub.add_parser("assess", help="逐路段 PCI 评定（M2）")
     assess_p.add_argument("--year", required=True, type=int)
@@ -63,10 +72,11 @@ def build_parser():
     compare_p.add_argument("--from-year", required=True, type=int, dest="year_from")
     compare_p.add_argument("--to-year", required=True, type=int, dest="year_to")
 
-    bench_p = sub.add_parser("bench", help="合成数据与基准评测（M1/M5）")
+    bench_p = sub.add_parser("bench", help="合成数据（M1 已可用）与基准评测（M5）")
     bench_p.add_argument("action", choices=["generate", "run"])
-    bench_p.add_argument("--seed", type=int, default=0)
+    bench_p.add_argument("--seed", type=int, default=None)
     bench_p.add_argument("--out", default=None)
+    bench_p.add_argument("--force", action="store_true", help="覆盖已存在的演示数据（冻结 fixtures 需显式解锁）")
 
     report_p = sub.add_parser("report", help="报告与清单导出（M6）")
     report_p.add_argument("--format", default="csv", choices=list(exporters.FORMATS))
@@ -219,13 +229,53 @@ def cmd_ledger(args):
 
 
 def cmd_import(args):
-    from road_mqi_checker.ledger import importer
-
     conn, ruleset = _prepared(args)
+    receipt = importer.import_csv(
+        conn, args.file, args.year, data_class=args.data_class, dry_run=args.dry_run
+    )
+    payload = {"receipt": receipt.summary(), "receipt_rows": receipt.to_rows()}
+    lines = ["导入回执："] + receipt.report_lines()
     if args.dry_run:
-        importer.plan_import(conn, args.file)
-    else:
-        importer.import_csv(conn, args.file, args.year, ruleset)
+        lines.append("（--dry-run：未写库）")
+    elif not receipt.duplicate_file:
+        findings = ledger_checks.run_all_checks(conn, args.year, ruleset)
+        summary = ledger_checks.summarize(findings)
+        payload["checks"] = summary
+        payload["findings"] = [finding.as_dict() for finding in findings]
+        lines.append("确定性校验：")
+        lines.extend(ledger_checks.report_lines(findings, summary)[1:])
+        lines.append("注：拒入行只说明该行未进台账；被检出的异常行仍在台账里，等 M2 的评定通路对其拒算。")
+    _print(payload, args.as_json, lines=lines)
+    # 退出码口径（plan/02 §6）：有拒入行 = 1 降级完成；校验检出项本身不改退出码
+    return EXIT_DEGRADED if receipt.rows_rejected else EXIT_OK
+
+
+def cmd_bench(args):
+    if args.action == "generate":
+        from road_mqi_checker.bench import generator
+
+        seed = generator.DEFAULT_SEED if args.seed is None else args.seed
+        if seed < 0:
+            raise InputUnavailable("seed 必须是非负整数，收到 %d" % seed)
+        out_dir = args.out if args.out else os.path.join(find_data_dir(start=os.getcwd()), "raw")
+        result = generator.generate(out_dir, seed=seed, force=args.force)
+        totals = result["totals"]
+        payload = dict(result)
+        payload["seed"] = seed
+        lines = [
+            "合成数据：%s 与 truth/ 共 %d 份文件（本次实际改写 %d 份，其余逐字节一致未重写）"
+            % (result["raw_dir"], result["files_written"], result["files_changed"]),
+            "规模口径：3 条虚拟路线 × 4 个年度，seed=%d" % seed,
+            "raw 行 %d / truth 行 %d / 注入用例 %d" % (
+                totals["raw_rows"], totals["truth_rows"], totals["injected_cases"]
+            ),
+            "注入分布：" + ", ".join("%s x%d" % (key, totals["by_issue"][key]) for key in sorted(totals["by_issue"])),
+            "干净对照格子：" + ", ".join(totals["clean_cells"]),
+            "真值四列当前一律为 pending 令牌（生效系数 0 格，未核对不出数）。",
+        ]
+        _print(payload, args.as_json, lines=lines)
+        return EXIT_OK
+    evaluation.gate(evaluation.initial_metric_table())
     return EXIT_OK
 
 
@@ -253,18 +303,6 @@ def cmd_compare(args):
 
     conn, ruleset = _prepared(args)
     compare.compare_years(conn, "", args.year_from, args.year_to, [], ruleset)
-    return EXIT_OK
-
-
-def cmd_bench(args):
-    if args.action == "generate":
-        from road_mqi_checker.bench import generator
-
-        if args.seed < 0:
-            raise InputUnavailable("seed 必须是非负整数，收到 %d" % args.seed)
-        generator.generate(args.out or os.path.join("data", "raw"), seed=args.seed)
-    else:
-        evaluation.gate(evaluation.initial_metric_table())
     return EXIT_OK
 
 

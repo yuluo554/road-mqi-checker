@@ -1,0 +1,458 @@
+{
+  "coefficient_gate": {
+    "active": 0,
+    "blocked": 15,
+    "ruleset_id": "base-jtg5210-2018",
+    "truth_note": "生效系数 0 格时真值四列一律为 pending 令牌：未核对不出数"
+  },
+  "data_class": "SYNTHETIC",
+  "dictionary_version": "1",
+  "files": [
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "duplicate_import",
+        "gap_chain"
+      ],
+      "injections": [
+        {
+          "detail": "同一条破损调查记录在文件内出现两次",
+          "injected_field": "row",
+          "injected_issue": "duplicate_import",
+          "segment_id": "S99-A1"
+        },
+        {
+          "detail": "起点晚于上一路段终点 200 m（悬空）",
+          "injected_field": "seg_start_stake",
+          "injected_issue": "gap_chain",
+          "segment_id": "S99-A2"
+        }
+      ],
+      "raw_file": "S99-2022.csv",
+      "raw_rows": 12,
+      "raw_sha1": "6550e24b4230d3af5e86ec7308b3846d7a2b333d",
+      "route_id": "S99",
+      "scenarios": [
+        "duplicate_import",
+        "gap_chain",
+        "localized_damage",
+        "normal_aging"
+      ],
+      "truth_file": "S99-2022.truth.csv",
+      "truth_rows": 4,
+      "truth_sha1": "0bbfb47b0e4e50ea0cf7100786f2959b969d4793",
+      "year": 2022
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [],
+      "injections": [],
+      "raw_file": "S99-2023.csv",
+      "raw_rows": 14,
+      "raw_sha1": "f1c7cc776c367ae95e2f3170e589e826c37176b2",
+      "route_id": "S99",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging"
+      ],
+      "truth_file": "S99-2023.truth.csv",
+      "truth_rows": 4,
+      "truth_sha1": "ab69f35630f0694400dfab5a53a5833e7114b729",
+      "year": 2023
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "out_of_range",
+        "partition_change"
+      ],
+      "injections": [
+        {
+          "detail": "行驶质量指数超出该指数的定义域",
+          "injected_field": "rqi",
+          "injected_issue": "out_of_range",
+          "segment_id": "S99-A1"
+        },
+        {
+          "detail": "由 S99-A2 拆分而来（split）",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "S99-A2A"
+        },
+        {
+          "detail": "由 S99-A2 拆分而来（split）",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "S99-A2B"
+        },
+        {
+          "detail": "2025 年起不再存在（disappeared），标记落在其最后存在年度",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "S99-A4"
+        }
+      ],
+      "raw_file": "S99-2024.csv",
+      "raw_rows": 20,
+      "raw_sha1": "c60ebe2bafc3b9b93e36c3c79a14b53b137b5c66",
+      "route_id": "S99",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging",
+        "out_of_range",
+        "partition_change"
+      ],
+      "truth_file": "S99-2024.truth.csv",
+      "truth_rows": 5,
+      "truth_sha1": "a6d2588ecdb0d73d368e28dc6ef0b1ac6b697a81",
+      "year": 2024
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "negative_value",
+        "overlap_chain",
+        "partition_change"
+      ],
+      "injections": [
+        {
+          "detail": "坑槽面积为负",
+          "injected_field": "quantity",
+          "injected_issue": "negative_value",
+          "segment_id": "S99-A2A"
+        },
+        {
+          "detail": "起点早于上一路段终点，重叠 100 m",
+          "injected_field": "seg_start_stake",
+          "injected_issue": "overlap_chain",
+          "segment_id": "S99-A3"
+        },
+        {
+          "detail": "2025 年新出现的路段（new）",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "S99-A5"
+        }
+      ],
+      "raw_file": "S99-2025.csv",
+      "raw_rows": 16,
+      "raw_sha1": "3647d1fa36cb295b0faf45acb82cfb320edf287d",
+      "route_id": "S99",
+      "scenarios": [
+        "localized_damage",
+        "negative_value",
+        "normal_aging",
+        "overlap_chain",
+        "partition_change"
+      ],
+      "truth_file": "S99-2025.truth.csv",
+      "truth_rows": 5,
+      "truth_sha1": "2b26beca0424f21131f6ae648bbbb9ebf04b416e",
+      "year": 2025
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "overlap_chain",
+        "unit_error"
+      ],
+      "injections": [
+        {
+          "detail": "坑洞按长度单位登记，量纲与其字典口径不符",
+          "injected_field": "quantity_unit",
+          "injected_issue": "unit_error",
+          "segment_id": "X990-B2"
+        },
+        {
+          "detail": "起点早于 B2 终点，重叠 100 m",
+          "injected_field": "seg_start_stake",
+          "injected_issue": "overlap_chain",
+          "segment_id": "X990-B3"
+        }
+      ],
+      "raw_file": "X990-2022.csv",
+      "raw_rows": 7,
+      "raw_sha1": "2a0c707ccaf6a67b63d3337bf4b1c0e820e2ffd2",
+      "route_id": "X990",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging",
+        "overlap_chain",
+        "unit_error"
+      ],
+      "truth_file": "X990-2022.truth.csv",
+      "truth_rows": 3,
+      "truth_sha1": "cfba3b7147743a7ea4e0dd187d6a503d2a12224e",
+      "year": 2022
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "out_of_range"
+      ],
+      "injections": [
+        {
+          "detail": "破碎板数超过该路段板块总数",
+          "injected_field": "quantity",
+          "injected_issue": "out_of_range",
+          "segment_id": "X990-B1"
+        }
+      ],
+      "raw_file": "X990-2023.csv",
+      "raw_rows": 11,
+      "raw_sha1": "2c678368e925a28c225afa11546906d1b93d17a4",
+      "route_id": "X990",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging",
+        "out_of_range"
+      ],
+      "truth_file": "X990-2023.truth.csv",
+      "truth_rows": 3,
+      "truth_sha1": "61561b8482d2e3bc0c2dd0e4f884ca5365889bd9",
+      "year": 2023
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "duplicate_import",
+        "partition_change"
+      ],
+      "injections": [
+        {
+          "detail": "同一条破损调查记录在文件内出现两次",
+          "injected_field": "row",
+          "injected_issue": "duplicate_import",
+          "segment_id": "X990-B1"
+        },
+        {
+          "detail": "由 X990-B2 与 X990-B3 合并而来（merged）",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "X990-B23"
+        }
+      ],
+      "raw_file": "X990-2024.csv",
+      "raw_rows": 8,
+      "raw_sha1": "87d225826f1c92a5f4a9c7259af81a98703ea071",
+      "route_id": "X990",
+      "scenarios": [
+        "duplicate_import",
+        "localized_damage",
+        "normal_aging",
+        "partition_change"
+      ],
+      "truth_file": "X990-2024.truth.csv",
+      "truth_rows": 2,
+      "truth_sha1": "e3c919b8ce0433f0212cfe7c0c30cae85c44a426",
+      "year": 2024
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [],
+      "injections": [],
+      "raw_file": "X990-2025.csv",
+      "raw_rows": 5,
+      "raw_sha1": "1971b84b548753d0221e8466d8d503cdff3d874b",
+      "route_id": "X990",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging"
+      ],
+      "truth_file": "X990-2025.truth.csv",
+      "truth_rows": 2,
+      "truth_sha1": "e1e35b5dff6d0fa4b7dde8ec6b22bc84f266bf4e",
+      "year": 2025
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "gap_chain",
+        "negative_value"
+      ],
+      "injections": [
+        {
+          "detail": "纵向裂缝长度为负",
+          "injected_field": "quantity",
+          "injected_issue": "negative_value",
+          "segment_id": "Y999-C1"
+        },
+        {
+          "detail": "起点晚于 C1 终点 200 m（悬空）",
+          "injected_field": "seg_start_stake",
+          "injected_issue": "gap_chain",
+          "segment_id": "Y999-C2"
+        }
+      ],
+      "raw_file": "Y999-2022.csv",
+      "raw_rows": 8,
+      "raw_sha1": "1dbf3bdd470711c1074c603c6333bf1ad7fd24d0",
+      "route_id": "Y999",
+      "scenarios": [
+        "gap_chain",
+        "localized_damage",
+        "negative_value",
+        "normal_aging"
+      ],
+      "truth_file": "Y999-2022.truth.csv",
+      "truth_rows": 3,
+      "truth_sha1": "9d4b0582ed3208db373efa6a6662321a2c3c3249",
+      "year": 2022
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [],
+      "injections": [],
+      "raw_file": "Y999-2023.csv",
+      "raw_rows": 10,
+      "raw_sha1": "10d78c1e9aa2b91e9bf918261ad1678007752f71",
+      "route_id": "Y999",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging"
+      ],
+      "truth_file": "Y999-2023.truth.csv",
+      "truth_rows": 3,
+      "truth_sha1": "abede88d9a3afc32cbb35553681f860d616938a0",
+      "year": 2023
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "partition_change"
+      ],
+      "injections": [
+        {
+          "detail": "里程延长后新增路段（new）",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "Y999-C4"
+        }
+      ],
+      "raw_file": "Y999-2024.csv",
+      "raw_rows": 12,
+      "raw_sha1": "25e9752055abba347829fa1728ad45d3f54e19e1",
+      "route_id": "Y999",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging",
+        "partition_change"
+      ],
+      "truth_file": "Y999-2024.truth.csv",
+      "truth_rows": 4,
+      "truth_sha1": "ec228e5778f014a85d9dda9e78dca9814e2832b2",
+      "year": 2024
+    },
+    {
+      "data_class": "SYNTHETIC",
+      "injected_issues": [
+        "partition_change",
+        "unit_error"
+      ],
+      "injections": [
+        {
+          "detail": "与 C1 的界桩一起外移 100 m（shifted，链条仍连续）",
+          "injected_field": "segment_id",
+          "injected_issue": "partition_change",
+          "segment_id": "Y999-C2"
+        },
+        {
+          "detail": "网状裂缝按长度单位登记，量纲与其字典口径不符",
+          "injected_field": "quantity_unit",
+          "injected_issue": "unit_error",
+          "segment_id": "Y999-C3"
+        }
+      ],
+      "raw_file": "Y999-2025.csv",
+      "raw_rows": 16,
+      "raw_sha1": "5dbfe54b0cac990b15dc3c95df91907a3f2c513b",
+      "route_id": "Y999",
+      "scenarios": [
+        "localized_damage",
+        "normal_aging",
+        "partition_change",
+        "unit_error"
+      ],
+      "truth_file": "Y999-2025.truth.csv",
+      "truth_rows": 4,
+      "truth_sha1": "d4ce8c55fa44adadd032d640072b067f954008fb",
+      "year": 2025
+    }
+  ],
+  "generator": "road_mqi_checker.bench.generator",
+  "routes": [
+    "S99",
+    "X990",
+    "Y999"
+  ],
+  "schema": {
+    "raw_columns": [
+      "year",
+      "route_id",
+      "route_name",
+      "admin_grade",
+      "tech_grade",
+      "route_start_stake",
+      "route_end_stake",
+      "adcode",
+      "segment_id",
+      "segment_name",
+      "seg_start_stake",
+      "seg_end_stake",
+      "surface_type",
+      "lane_count",
+      "segment_width_m",
+      "panel_count",
+      "rqi",
+      "rut_depth_mm",
+      "skid_indicator",
+      "skid_indicator_kind",
+      "report_no",
+      "detect_org",
+      "distress_type",
+      "severity",
+      "quantity",
+      "quantity_unit",
+      "lane_no",
+      "note"
+    ],
+    "truth_columns": [
+      "segment_id",
+      "route_id",
+      "year",
+      "surface_type",
+      "pci_truth",
+      "grade_truth",
+      "mqi_partial_truth",
+      "recommended_action_truth",
+      "injected_issue",
+      "injected_field"
+    ]
+  },
+  "seed": 20261007,
+  "totals": {
+    "by_issue": {
+      "duplicate_import": 2,
+      "gap_chain": 2,
+      "negative_value": 2,
+      "out_of_range": 2,
+      "overlap_chain": 2,
+      "partition_change": 7,
+      "unit_error": 2
+    },
+    "clean_cells": [
+      "S99-2023",
+      "X990-2025",
+      "Y999-2023"
+    ],
+    "injected_cases": 19,
+    "raw_rows": 139,
+    "truth_rows": 42
+  },
+  "years": [
+    2022,
+    2023,
+    2024,
+    2025
+  ]
+}
