@@ -6,7 +6,7 @@
 评分变化能追到具体破损项。聊天框答不出"这段 4.2 公里今年比去年低 6 分是哪几处坑槽扣掉的、
 按规则该排小修还是中修"——因为它没有路段台账，也没有可复算的扣分表。
 
-> **状态：M2 评定内核（✅）／M3 规则与条款（✅，查证结论为"官方原文不可得"）／M4 汇总、对策与年对比（✅）／M5 基准与评测（✅）／M6 交付层（🟡 报告导出与桌面壳已转真并实测；打包、一键验证、脱敏发布、CI、tag 未做）** ——
+> **状态：M2 评定内核（✅）／M3 规则与条款（✅，查证结论为"官方原文不可得"）／M4 汇总、对策与年对比（✅）／M5 基准与评测（✅）／M6 交付层（🟡 报告导出与桌面壳已转真并实测；发布面 CI 首跑 / tag / release 待授权）** ——
 > 台账导入、导入回执、八类确定性校验、合成数据基准、**路面 PCI 评定与扣分贡献展开**、
 > **三级 MQI 汇总与分级判定、对策规则链与优先序、年对比与变化贡献项**、
 > **两通路四态基准评测（`rmqc bench run`）**、**报告导出（`rmqc report`：csv / md / docx 三格式）**与
@@ -146,7 +146,8 @@ python -m pytest                  # 守门测试
 ```
 
 免安装 exe（M6 已构建并实测，尚未随发布包提供——发布渠道要等授权后才开）：`packaging/rmqc.spec`
-一次构建产出 `dist/rmqc/rmqc.exe`（控制台，等价 `rmqc`）与 `dist/rmqc/rmqc-gui.exe`（双击即开桌面壳）。
+一次构建产出 `dist/rmqc/rmqc.exe`（控制台，等价 `rmqc`）与 `dist/rmqc/rmqc-gui.exe`（窗口壳，等价 `rmqc gui`；
+已实测的是它的 `--probe` 形态，不带探针会进 Qt 事件循环等用户关窗）。
 已实测的部分：把整包拷到仓库外的中立目录后，控制台 exe 跑通
 `selfcheck` / `ruleset list` / `ledger init` / `import` / `assess` / `aggregate` / `compare` /
 `report --format csv|md|docx`（内置系数包下按既有口径落 1），GUI exe 的 `--probe` 落 0；
@@ -173,7 +174,8 @@ python -m pytest                  # 守门测试
 它已经不走 3 号那一档。`gui` 自 M6 起真跑：装了 `[gui]` extras 时 `gui --probe` 落 0，
 缺 PySide6 落 1 并给 `pip install road-mqi-checker[gui]` 提示。
 命令面上已没有任何命令走占位符通路（`MilestoneNotImplemented` → 3 号的映射机制保留给未来骨架，
-占位符登记表 `_meta.PLACEHOLDER_MILESTONES` 现为空、`_meta.MILESTONE` = `M6`）；
+占位符登记表 `_meta.PLACEHOLDER_MILESTONES` 现为空、`_meta.MILESTONE` = `M6`；
+打包态 `bench run` 落 3 是"通路不可用"那一档 —— 包里没有 `tests/fixtures/`，与占位符无关，见上文的免安装 exe 段）；
 `import`、`bench generate` 自 M1 起真跑（`import` 有拒入行时落 1），`assess` 自 M2 起真跑，
 `aggregate`、`compare` 自 M4 起真跑（存在 blocked/partial/uncomparable 项时落 1；
 对应年度台账没有路段行时落 2），`bench run` 自 M5 起真跑，退出码按指标四态映射：
@@ -252,8 +254,9 @@ M6 新增的纪律类证据（导出与桌面壳，都是实跑命令 `rmqc repo
 `gui --probe` 是双向断言——装了 PySide6 返回 0（建主窗口、数七页签、跑一次 `version` 转发、
 再逐页触发内核，不进事件循环），缺 PySide6 返回 1 并给 `pip install road-mqi-checker[gui]` 提示。
 这一轮**没有**改变交付面不出数这件事：导出的是一张数值列留空、逐格写明拒算原因的表，
-不是可交付的评定结果；基准评测在内置包通路上仍如实报"不可判（分母为 0）"；
-打包（PyInstaller onedir 双 exe）、中立目录一键验证、脱敏发布、CI 首跑与 tag 都还没做。
+不是可交付的评定结果；基准评测在内置包通路上仍如实报"不可判（分母为 0）"。
+打包与发布面的实测与待办以 `plan/07-交付与打包.md`、`plan/RELEASE-M6.md` 的回执为准 ——
+建仓 / push / CI 四矩阵首跑 / tag / release 资产都还在等授权。
 
 ## 目录
 

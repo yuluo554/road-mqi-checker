@@ -33,7 +33,7 @@ LITERAL_CHECKS = (
     ("手机号 11 位（白名单外）", re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)"), lambda v: not PATTERNS["phone"].match(v)),
     ("身份证形态 18 位", re.compile(r"(?<!\d)\d{17}[\dXx](?!\d)"), lambda v: True),
     ("本机绝对路径/家目录", re.compile(r"[A-Za-z]:[\\/](?:Users|home|ProgramData|program)|/home/[a-z]+/"), lambda v: True),
-    ("密钥/Token 形态", re.compile(r"(gh[po]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-|AKIA[0-9A-Z]{16}|-----BEGIN)"), lambda v: True),
+    ("密钥/Token 形态", re.compile(r"(gh[po]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-|AKIA[0-9A-Z]{16}|-{5}BEGIN)"), lambda v: True),
     # 白名单内的虚构编号（S99 / X990 / Y999 / Z9901）不算违规；G/S 开头的真实国道省道才算
     ("真实形态路线编号", re.compile(r"(?<![A-Za-z0-9])[GSXYZ]\d{2,4}(?![A-Za-z0-9])"),
      lambda v: not PATTERNS["route_id"].match(v)),
@@ -59,8 +59,8 @@ EXEMPTIONS = (
     (
         "本机绝对路径/家目录",
         r"tests/",
-        "导出闸门的负向用例：`/home/example/`、`D:\\Users\\someone` 都是构造出来的字符串，"
-        "用来证明导出层会拒绝绝对路径（test_m6_report.py）",
+        "导出闸门的负向用例：斜杠 home 形态与盘符 Users 形态的构造字符串（本文件与用例都不写原样形态，"
+        "否则扫描器会被自己的示例文本自命中），用来证明导出层会拒绝绝对路径（test_m6_report.py）",
     ),
     (
         "真实形态路线编号",
