@@ -3,6 +3,60 @@
     "active": 1,
     "blocked": 14,
     "ruleset_id": "base-jtg5210-2018",
+    "truth_gates": {
+      "grade_truth": {
+        "note": "必需格仍有 1 格未生效（grade_threshold.pci）→ 该列一律为 pending:coeff 令牌：未核对不出数。",
+        "pending_keys": [
+          "grade_threshold.pci"
+        ],
+        "required_keys": [
+          "grade_threshold.pci"
+        ],
+        "state": "pending"
+      },
+      "mqi_partial_truth": {
+        "note": "必需格仍有 2 格未生效（grade_threshold.mqi、mqi_weight.pavement）→ 该列一律为 pending:coeff 令牌：未核对不出数。",
+        "pending_keys": [
+          "grade_threshold.mqi",
+          "mqi_weight.pavement"
+        ],
+        "required_keys": [
+          "mqi_weight.pavement",
+          "grade_threshold.mqi"
+        ],
+        "state": "pending"
+      },
+      "pci_truth": {
+        "note": "必需格仍有 7 格未生效（deduct_ratio.asphalt_distress、deduct_ratio.cement_distress、pci_component.ride_quality、pci_component.rutting、pci_component.skid_resistance、pci_weight.asphalt、pci_weight.cement）→ 该列一律为 pending:coeff 令牌：未核对不出数。",
+        "pending_keys": [
+          "deduct_ratio.asphalt_distress",
+          "deduct_ratio.cement_distress",
+          "pci_component.ride_quality",
+          "pci_component.rutting",
+          "pci_component.skid_resistance",
+          "pci_weight.asphalt",
+          "pci_weight.cement"
+        ],
+        "required_keys": [
+          "deduct_ratio.{surface}_distress",
+          "pci_component.ride_quality",
+          "pci_component.rutting",
+          "pci_component.skid_resistance",
+          "pci_weight.{surface}"
+        ],
+        "state": "pending"
+      },
+      "recommended_action_truth": {
+        "note": "必需格仍有 1 格未生效（action_rule.maintenance_trigger）→ 该列一律为 pending:coeff 令牌：未核对不出数。",
+        "pending_keys": [
+          "action_rule.maintenance_trigger"
+        ],
+        "required_keys": [
+          "action_rule.maintenance_trigger"
+        ],
+        "state": "pending"
+      }
+    },
     "truth_note": "真值评分两列的必需系数仍有 8 格未生效（deduct_ratio.asphalt_distress、deduct_ratio.cement_distress、grade_threshold.pci、pci_component.ride_quality、pci_component.rutting、pci_component.skid_resistance、pci_weight.asphalt、pci_weight.cement）→ 一律为 pending 令牌：未核对不出数；本包生效系数 1 格不等于评分列可出数。"
   },
   "data_class": "SYNTHETIC",
@@ -40,7 +94,7 @@
       ],
       "truth_file": "S99-2022.truth.csv",
       "truth_rows": 4,
-      "truth_sha1": "0bbfb47b0e4e50ea0cf7100786f2959b969d4793",
+      "truth_sha1": "bb02ca82b36311de00140e99334d7a675afaef83",
       "year": 2022
     },
     {
@@ -57,7 +111,7 @@
       ],
       "truth_file": "S99-2023.truth.csv",
       "truth_rows": 4,
-      "truth_sha1": "ab69f35630f0694400dfab5a53a5833e7114b729",
+      "truth_sha1": "92772789f677116271a39029216960c9d0316fea",
       "year": 2023
     },
     {
@@ -104,7 +158,7 @@
       ],
       "truth_file": "S99-2024.truth.csv",
       "truth_rows": 5,
-      "truth_sha1": "a6d2588ecdb0d73d368e28dc6ef0b1ac6b697a81",
+      "truth_sha1": "f2728518c42727aad73a51b8ae7c0fb42e0a075f",
       "year": 2024
     },
     {
@@ -147,7 +201,7 @@
       ],
       "truth_file": "S99-2025.truth.csv",
       "truth_rows": 5,
-      "truth_sha1": "2b26beca0424f21131f6ae648bbbb9ebf04b416e",
+      "truth_sha1": "e65213abb6047a880142aaeb1d64df7fb583068c",
       "year": 2025
     },
     {
@@ -182,7 +236,7 @@
       ],
       "truth_file": "X990-2022.truth.csv",
       "truth_rows": 3,
-      "truth_sha1": "cfba3b7147743a7ea4e0dd187d6a503d2a12224e",
+      "truth_sha1": "011fbffe08fdedf50989014fd5075edb3be0428b",
       "year": 2022
     },
     {
@@ -209,7 +263,7 @@
       ],
       "truth_file": "X990-2023.truth.csv",
       "truth_rows": 3,
-      "truth_sha1": "61561b8482d2e3bc0c2dd0e4f884ca5365889bd9",
+      "truth_sha1": "6ad8b912adb9e85b4c89cc24ecff0a227108a333",
       "year": 2023
     },
     {
@@ -244,7 +298,7 @@
       ],
       "truth_file": "X990-2024.truth.csv",
       "truth_rows": 2,
-      "truth_sha1": "e3c919b8ce0433f0212cfe7c0c30cae85c44a426",
+      "truth_sha1": "bef3ffad1413408ffb49e2894755c3facd738aaa",
       "year": 2024
     },
     {
@@ -261,7 +315,7 @@
       ],
       "truth_file": "X990-2025.truth.csv",
       "truth_rows": 2,
-      "truth_sha1": "e1e35b5dff6d0fa4b7dde8ec6b22bc84f266bf4e",
+      "truth_sha1": "5a33bd04cbda8500a39aab659ad59fcae8746294",
       "year": 2025
     },
     {
@@ -296,7 +350,7 @@
       ],
       "truth_file": "Y999-2022.truth.csv",
       "truth_rows": 3,
-      "truth_sha1": "9d4b0582ed3208db373efa6a6662321a2c3c3249",
+      "truth_sha1": "d72769b9360b2b6a75e93698787034462d50ec84",
       "year": 2022
     },
     {
@@ -313,7 +367,7 @@
       ],
       "truth_file": "Y999-2023.truth.csv",
       "truth_rows": 3,
-      "truth_sha1": "abede88d9a3afc32cbb35553681f860d616938a0",
+      "truth_sha1": "e487d670424bb0758c61e9f2da73be3e5ea54f74",
       "year": 2023
     },
     {
@@ -340,7 +394,7 @@
       ],
       "truth_file": "Y999-2024.truth.csv",
       "truth_rows": 4,
-      "truth_sha1": "ec228e5778f014a85d9dda9e78dca9814e2832b2",
+      "truth_sha1": "225b9c7b463e1f88982fe24d4487d93039ec8e72",
       "year": 2024
     },
     {
@@ -375,7 +429,7 @@
       ],
       "truth_file": "Y999-2025.truth.csv",
       "truth_rows": 4,
-      "truth_sha1": "d4ce8c55fa44adadd032d640072b067f954008fb",
+      "truth_sha1": "a733ca560978f8efce252818bf22ab7b0ab6c08d",
       "year": 2025
     }
   ],
