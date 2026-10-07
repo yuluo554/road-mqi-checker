@@ -3,6 +3,27 @@
 > 用法：新对话说「继续完成 `plan/HANDOFF-M1.md` 的 M1 任务」即可续接（本文件内命令均以仓库根为当前目录）。
 > 上一棒：M0 骨架与纪律（2026-10-07 完成，已本地 commit，未 push）。
 
+## 〇、M0 末态基线（不得回退）
+
+| 项 | 实测值 | 复核命令 |
+|---|---|---|
+| 提交 | 两个本地 commit（骨架 + 索引对账守门测试），工作树干净，**无 remote、未 push** | `git log --oneline -3` / `git status --porcelain` |
+| 测试 | 159 项，py3.8.8 与 py3.12.10 各 159 collected / 159 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
+| 全新 clone | `.tmp_verify/clone-m0` 下 159 全绿 + `selfcheck` 返回 0；`core.autocrlf=true` 环境下 CR 门通过（LF 声明生效） | `git clone . <目录>` 后照 README 跑 |
+| 系数门 | 生效 0 格 / 拒算 15 格，`selfcheck` 如实报"系数门关" | `rmqc selfcheck` |
+| 命令面 | `version/selfcheck/ruleset/ledger` 真跑；其余 7 个命令返回退出码 3 并指明里程碑 | `rmqc assess --year 2025` |
+
+两条留给下一棒的实测教训：
+
+1. **`.gitignore` 通配会吞源码包**：写 `ledger/` 想让运行期台账不入仓，结果 `src/road_mqi_checker/ledger/`
+   整个包被静默忽略 —— 开发机上跑得好好的，新 clone 直接 ImportError。已改成只忽略
+   `data/local/` + `*.sqlite`，并加了 `test_every_source_and_test_file_is_git_tracked`（与 `git ls-files` 对账）。
+   以后加 ignore 规则一律先 `git check-ignore -v src/...` 验一遍。
+2. **M6 脱敏扫描的已知误报面**（现在就登记，省得发布期重新发现）：
+   `tests/test_determinism_rng.py` 的 splitmix64 冻结向量是 19~20 位 u64 数字串，会撞身份证类正则；
+   `data/README.md`、`plan/01`、`privacy.py` 里的 `19900000000` 是白名单声明的虚构号段示例。
+   两者都属"合成数据白名单形态"，M6 扫描要按白名单豁免并留判定理由，不删字面也不改结论。
+
 ## 一、当前进度（M0 已交付）
 
 - 文档：`plan/00`（索引重编号 + M0 决策记录回写）、`plan/01`（题目定稿，未改）、`plan/02-开发计划与架构.md`（选型/架构/模块映射/三态口径/CLI/守门测试清单/M0–M6 DoD/既定口径/开放项）、`data/README.md`（补 M0 落地对照与 `#N` 出处指针说明）；
@@ -13,7 +34,7 @@
   - 已实现的小块工具：`pci/engine.quantize`（固定舍入）、`bench/rng.py`（splitmix64）、`bench/evaluation.initial_metric_table`（四态指标表初值）、`report/disclaimer.py`、`gui/app.build_page_map`；
   - 占位符：`ledger.importer` / `ledger.checks` / `bench.generator`（M1）、`pci.engine` / `pci.trace`（M2）、`mqi.engine` / `strategy.rules` / `strategy.compare`（M4）、`bench.evaluation.gate`（M5）、`report.exporters` / `gui.app.main`（M6）；
 - 交付外围：`pyproject.toml`（3.8 下限、extras 分档上界、`rmqc` 入口、package-data 收规则集）、`LICENSE`(MIT)、`.gitattributes`(eol=lf)、`.gitignore`（补 `.tmp_*/`、`data/local/`）、`.github/workflows/ci.yml`（四矩阵）、`README.md`（含四态评测表，全部标"不可用"）；
-- 测试：`tests/` 14 个文件 **158 项**，py3.8.8 与 py3.12.10 双通道各 158 collected / 158 passed / 0 skip / 0 warning。
+- 测试：`tests/` 14 个文件 **159 项**，py3.8.8 与 py3.12.10 双通道各 159 collected / 159 passed / 0 skip / 0 warning。
 
 ## 二、M1 待办（按顺序做，全部做完才算完）
 
