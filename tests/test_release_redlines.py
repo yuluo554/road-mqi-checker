@@ -6,24 +6,17 @@
 
 import os
 import shutil
-import subprocess
 
 import pytest
 
 from road_mqi_checker.errors import PrivacyViolation
 from road_mqi_checker.report import disclaimer
 from road_mqi_checker.ruleset import loader
+from support_git import BINARY_SUFFIXES, git_lines, tracked_files, walk_files
 
 
 def _walk_files(root, suffixes):
-    out = []
-    for dirpath, dirs, files in os.walk(root):
-        # .tmp_* 是本工程约定的会话内临时产物目录（已 gitignore，字节门与扫描都跳过）
-        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "build", "dist") and not d.startswith(".tmp_")]
-        for name in files:
-            if name.endswith(suffixes):
-                out.append(os.path.join(dirpath, name))
-    return out
+    return walk_files(root, suffixes)
 
 
 def test_fixture_channel_never_appears_in_data_or_shipped_rulesets(repo_root):
@@ -108,18 +101,10 @@ def test_every_source_and_test_file_is_git_tracked(repo_root):
         pytest.skip("环境无 git")
     if not os.path.isdir(os.path.join(repo_root, ".git")):
         pytest.skip("不在 git 仓库内（例如只拷贝了源码树）")
-    proc = subprocess.run(
-        ["git", "-c", "core.quotepath=false", "ls-files"],
-        cwd=repo_root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    assert proc.returncode == 0, proc.stderr
-    tracked = set()
-    for line in proc.stdout.splitlines():
-        if line.strip():
-            tracked.add(line.strip().replace("/", os.sep))
+    # git 输出仓库相对路径且永远用正斜杠，与工作树比较时要换成本地分隔符
+    names = tracked_files(repo_root)
+    tracked = set(name.replace("/", os.sep) for name in names or [])
+    assert tracked, "git ls-files 返回空清单（多半是编码或仓库状态问题，见 support_git）"
 
     untracked = []
     for root_name in ("src", "tests"):
@@ -135,22 +120,24 @@ def test_every_source_and_test_file_is_git_tracked(repo_root):
     if not untracked:
         return
 
-    probe = subprocess.run(
-        ["git", "check-ignore", "-v", "--"] + untracked,
-        cwd=repo_root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-    )
+    probe = git_lines(repo_root, ["check-ignore", "-v", "--"] + untracked)
     raise AssertionError(
         "以下源码/测试文件未被 git 跟踪，新 clone 会缺件：%s\n误吞它们的 ignore 规则：%s"
-        % (untracked, probe.stdout.strip() or "（check-ignore 未命中，可能是未曾 add）")
+        % (untracked, (probe.stdout or "").strip() or "（check-ignore 未命中，可能是未曾 add）")
     )
 
 
 def test_no_binary_samples_without_ledger_entry(repo_root):
-    """骨架期仓库不该有二进制样例；将来出现就要同步台账（M6 白名单的前身）。"""
-    tracked_binaries = []
-    for path in _walk_files(repo_root, (".pdf", ".docx", ".xlsx", ".zip", ".exe", ".png", ".jpg", ".db", ".sqlite")):
-        tracked_binaries.append(path)
-    assert not tracked_binaries, "出现二进制文件，需同步 data/README 台账与脱敏白名单：%s" % tracked_binaries
+    """仓库里不该有未登记的二进制样例；将来出现就要同步 data/README 台账（M6 白名单的前身）。
+
+    口径是**已跟踪文件**，不是工作树：装在仓库里的 `.venv/`（README 快速开始就是这么写的）
+    和本地跑的 `ledger.sqlite` 都是 gitignore 掉的运行期产物，把它们算进交付面会让这条门
+    在任何一台照 README 做过干净环境验证的机器上假红。
+    """
+    names = tracked_files(repo_root) if shutil.which("git") is not None else None
+    if names is None:
+        candidates = _walk_files(repo_root, BINARY_SUFFIXES)
+    else:
+        candidates = [os.path.join(repo_root, name.replace("/", os.sep)) for name in names]
+    offenders = [path for path in candidates if path.endswith(BINARY_SUFFIXES)]
+    assert not offenders, "出现二进制文件，需同步 data/README 台账与脱敏白名单：%s" % offenders

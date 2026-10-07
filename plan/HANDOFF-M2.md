@@ -8,13 +8,13 @@
 | 项 | 实测值 | 复核命令 |
 |---|---|---|
 | 提交 | 本地 main 一串 M0+M1 提交（骨架 → 索引对账门 → M0 台账 → M1 数据通路），工作树干净，**无 remote、未 push**；确切条数与哈希看 `git log --oneline` | `git log --oneline` / `git status --porcelain` |
-| 测试 | 209 项，py3.8.8 与 py3.12.10 各 209 collected / 209 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
+| 测试 | 213 项，py3.8.8 与 py3.12.10 各 213 collected / 213 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
 | 演示数据 | 已入仓为**冻结 fixtures**：`data/raw` 12 份检测表 + manifest（13 份）、`data/truth` 12 份真值；共 139 行 raw / 42 行 truth / 19 例注入 | `git ls-files data/` |
 | 位级一致 | 同 seed 重跑逐字节一致；`rmqc bench generate` 在内容一致时**不改写任何文件**（`files_changed=0`），换 seed 才需要 `--force` | `rmqc bench generate` 后 `git status --porcelain data/`（应为空） |
 | 实测指标 | 异常识别召回 **1.00（19/19）**、误报 **0.00（0/32 干净对象）**；校验结论 27 条 = 23 检出 + 4 未判定（全是闭合差） | `py -3.8 -X utf8 -m pytest tests/test_m1_pipeline.py -k "recall or false_alarm" -q` |
 | 命令面 | `version/selfcheck/ruleset/ledger/import/bench generate` 真跑；`assess/aggregate/compare/bench run/report/gui` 返回 3 并指明里程碑 | `rmqc assess --year 2025` |
 | 台账 schema | `schema_version = 2`：7 张表，`segment` 有 `lane_count` / `segment_width_m` / `panel_count` 三个可空列 | `rmqc selfcheck` / `rmqc ledger tables` |
-| 干净环境 | 新 clone + 新 venv 按 README 逐条跑通：`pip install -e .[dev]` → 209 全绿 → `selfcheck` 0 → `bench generate` 幂等 → `import`（有拒入行 = 1）→ `assess` = 3 | 见本文件 §六 |
+| 干净环境 | 新 clone + 新 venv（py3.12）按 README 逐条跑通：`pip install -U pip setuptools wheel` → `pip install -e .[dev]`（清华源 + NO_PROXY）→ `rmqc version/selfcheck/ruleset/ledger init` → `bench generate`（幂等，`git status data/` 为空）→ `import` 有拒入行 = 1 → `import --dry-run` = 0 → `assess` = 3 → `pytest` 全绿 → `python -m road_mqi_checker selfcheck` = 0。首轮跑出**三条闸门自身的环境 bug**，已修并补回归（见 §〇 教训 4） | `.tmp_*/clean_env.sh`，脚本化步骤见 §六 |
 
 三条留给下一棒的实测教训：
 
@@ -31,6 +31,15 @@
 3. **`--force` 的语义是"允许改动已入仓产物"**，不是"覆盖文件"。`write_if_changed` 先比内容再决定，
    所以同 seed 重跑天然幂等。M2 若改了产物格式（例如给 raw 加列），入仓数据必须一起重生成并单独提交，
    不能让守门测试在"新代码 + 旧数据"上跑绿。
+
+4. **闸门自己也会挂环境**，所以"干净环境验证"必须真跑而不是走流程。M1 首轮在 venv 里跑出三条假红：
+   - 读 `git ls-files` 时用 `universal_newlines=True` 不指定编码 → Windows 按 GBK 解码中文路径
+     在子线程抛 `UnicodeDecodeError`，`proc.stdout` 变 `None`，EOL 门与"源码是否被跟踪"门双双 `AttributeError`；
+   - "不许有二进制样例"那条门扫的是**工作树**，于是 `.venv/Scripts/*.exe` 与本地 `ledger.sqlite`
+     全被抓进来 —— 而 README 的快速开始本来就把 venv 建在仓库里；
+   - 分隔符换算（git 永远输出正斜杠）被顺手丢掉过一次，靠门自己报出 55 个"未跟踪文件"才发现。
+   现在三条都收在 `tests/support_git.py` 一处，回归在 `tests/test_gates_environment.py`：
+   **交付面 = 已跟踪文件，不是工作树**；git 输出必须按 UTF-8 解码。M2 起再写扫树的门，一律走这个模块。
 
 ## 一、当前进度（M1 已交付）
 
@@ -53,8 +62,9 @@
     话术固定带"不可比，不做里程摊分"；`run_all_checks` + `summarize`；
   - `ledger/db.py`：schema v2（`segment` 三个可空列）；`cli.py`：`import` 与 `bench generate` 接通，
     `--data-class`、`--force` 两个新参数；`_meta.MILESTONE = "M1"`；
-- 测试：`tests/` 17 个文件 **209 项**（M1 新增 `test_m1_generator.py` 16 项 + `test_m1_pipeline.py` 34 项），
-  双解释器各 209 collected / 209 passed / 0 skip / 0 warning。
+- 测试：`tests/` 18 个文件 **213 项**（M1 新增 `test_m1_generator.py`、`test_m1_pipeline.py`、
+  `test_gates_environment.py` + 共用 `support_git.py`），
+  双解释器各 213 collected / 213 passed / 0 skip / 0 warning。
 
 ## 二、M2 待办（按顺序做，全部做完才算完）
 

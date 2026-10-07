@@ -5,19 +5,10 @@
 
 import os
 import shutil
-import subprocess
 
 import pytest
 
-
-def _git(args, cwd):
-    return subprocess.run(
-        ["git", "-c", "core.quotepath=false"] + args,
-        cwd=cwd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
+from support_git import TEXT_SUFFIXES, tracked_files
 
 
 def test_gitattributes_declares_lf(repo_root):
@@ -32,16 +23,11 @@ def test_gitattributes_declares_lf(repo_root):
 def test_tracked_text_files_have_no_cr(repo_root):
     if not os.path.isdir(os.path.join(repo_root, ".git")):
         pytest.skip("不在 git 仓库内（例如只拷贝了源码树）")
-    proc = _git(["ls-files", "-z"], repo_root)
-    assert proc.returncode == 0, proc.stderr
-    names = [name for name in proc.stdout.split("\0") if name]
-    text_suffix = (".py", ".md", ".toml", ".yml", ".yaml", ".json", ".txt", ".cfg", ".ini", ".csv")
-    binaries = (".pdf", ".png", ".jpg", ".ico", ".exe", ".dll", ".zip", ".docx", ".xlsx", ".db", ".sqlite")
+    names = tracked_files(repo_root)
+    assert names is not None, "git ls-files 不可用"
     offenders = []
     for name in names:
-        if name.endswith(binaries):
-            continue
-        if not name.endswith(text_suffix):
+        if not name.endswith(TEXT_SUFFIXES):
             continue
         full = os.path.join(repo_root, name)
         if not os.path.isfile(full):
