@@ -75,6 +75,10 @@
     `compute_pci`（换算核：破损扣分 + 三项实测换算 + 权重归一 + 等级判定）、
     `compute_segment_pci` / `assess_year` / `load_segment_input` / `blocking_findings`（台账通路）、
     `result_payload` / `summarize_status`（给 M4/M6 的结构）、`BLOCKING_CHECK_KINDS`、`SHARE_DECIMALS`；
+    **给 M4 的接口形态**：`assess_year` 返回 `List[PciResult]`，正是
+    `mqi.engine.aggregate_{segment,route,network}_mqi(conn, …, pci_results, ruleset)` 与
+    `strategy.compare.compare_years(conn, …, pci_results, ruleset)` 的 `pci_results` 入参，
+    M4 直接把这个列表递过去，不要另起一套取数路径；
   - `pci/trace.py`：`TRACE_COLUMNS` 末列追加 `source_row_no`、`TRACE_ORDER_KEYS` 与 `order_key`
     （扣分降序主键 + 六个固定次级键、空值排后）、`expand_contributions`、`contributions_for_cell`、
     `top_contributors`（M4 年对比直接取用）、`report_lines`；
