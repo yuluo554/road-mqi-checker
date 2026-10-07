@@ -10,7 +10,7 @@
 | 项 | 实测值 | 复核命令 |
 |---|---|---|
 | 提交 | 本地 main 一串 M0→M6 提交，**无 remote、未 push**；工作树只剩不属于本项目的未跟踪 `.qoder-credits/` | `git log --oneline -6` / `git status --porcelain` |
-| 测试 | **487 项**（M6 净增 77），py3.8.8 与 py3.12.10 双通道各 487 collected / 487 passed / 0 skip / 0 warning | `PYTHONDONTWRITEBYTECODE=1 py -3.8 -X utf8 -m pytest tests -q` |
+| 测试 | **489 项**（M6 净增 79：486→487 是冻结态落点门，488–489 是 Windows CI 报出来的两条 locale 门），py3.8.8 与 py3.12.10 双通道各 489 collected / 489 passed / 0 skip / 0 warning | `PYTHONDONTWRITEBYTECODE=1 py -3.8 -X utf8 -m pytest tests -q` |
 | 占位符 | 登记表 **空**（终态），`_meta.MILESTONE = "M6"`，`MILESTONE_DOCS["M6"] = plan/07` 且该文件真实存在（有门） | `rmqc --json selfcheck` 的 `placeholders` |
 | 命令面 | **没有任何命令返回 3**；`version/selfcheck/ruleset/ledger/import/assess/aggregate/compare/bench/report/gui` 全部真跑 | `tests/test_cli_contract.py::test_no_command_in_the_surface_returns_the_unimplemented_code` |
 | 导出面 | `rmqc report --year Y [--scope assessment\|plan] [--level] [--from-year] --format csv\|md\|docx --out`：内置包下 **1**（导出成功但全 blocked）、无数据年度/后缀不符/目录缺失 **2**；三格式两次导出逐字节一致；末尾两行必为 `DISCLAIMER` / `DATA_CLASS_NOTE` | `bash .tmp_verify/M6/clean_verify.sh`（或 `tests/test_m6_report.py`，51 项） |
@@ -20,7 +20,7 @@
 | 一键交付验证 | `.tmp_verify/M6/clean_verify.sh`：**68 步 want==got 全对**，三处 `git status --porcelain data/` 均为空；回执 `.tmp_verify/M6/exits.tsv` + `run.log` | `bash .tmp_verify/M6/clean_verify.sh` |
 | 打包态评测 | 把包**拷到仓库外**后 `rmqc.exe bench run` → **3**（夹具通路 8 行不可用、内置通路 5 不可判 + 3 达标），逐字节导出与源码态一致；留在仓库树里量到的是 0（上溯分支命中 `tests/fixtures/`），那不是用户形态 | `plan/07` §3.4 |
 | 脱敏 | `packaging/scan_release.py` 四步全过（返回 0）：提交身份 1 条 noreply / 交付面字面 125 份 17 处全豁免 / 数据结构 151 行 0 越界 / 构建产物本体 0 命中 | `py -3.8 -X utf8 packaging/scan_release.py` |
-| M5 基线 | 未回退：410→487 是**净增**（重写门而不是删门），`bench run` 仍 16 行 + 退出码 0、内置包仍 blocked、24 份 CSV + manifest 位级未动、README 评测表仍由命令生成并逐行对账 | `tests/test_m5_bench.py` / `git status --porcelain data/` |
+| M5 基线 | 未回退：410→489 是**净增**（重写门而不是删门），`bench run` 仍 16 行 + 退出码 0、内置包仍 blocked、24 份 CSV + manifest 位级未动、README 评测表仍由命令生成并逐行对账 | `tests/test_m5_bench.py` / `git status --porcelain data/` |
 
 留给下一棒的实测教训：
 
@@ -55,7 +55,7 @@
 - **打包与审计层**：`packaging/rmqc.spec`（双 exe + datas 白名单 + excludes + hiddenimports + `-X utf8`）、
   `entry_cli.py` / `entry_gui.py`（薄壳）、`verify_build.py`（构建后五类红线断言）、
   `scan_release.py`（脱敏四步 + 豁免台账）；
-- **测试 410 → 487**：新增 `test_m6_report.py`（51）、`test_m6_gui.py`（23）；
+- **测试 410 → 489**：新增 `test_m6_report.py`（51）、`test_m6_gui.py`（23）；
   重写 `test_cli_contract.py` 的占位符命令门（3 条 → 4 条 + 冻结态落点门，净 +2）、
   `test_placeholder_registry.py`（M6 转真门 + 出口判据文档必须真实存在）；
 - **文档**：`plan/07-交付与打包.md`（导出结构 / 七页签与探针 / spec 与五类断言 / 一键验证实测 / 本机坑）、
@@ -110,7 +110,7 @@ M0–M6 累计见 `plan/02` §9 第 1–35 条。M7 最相关的：三态 + `fix
 - [ ] 用户授权后：建仓 + push + CI 四矩阵首跑全绿，结果写进 `plan/RELEASE-M6.md`
 - [ ] tag + release + README 状态行与"免安装 exe 资产"说法与事实一致（资产真上传才改）
 - [ ] 桌面窗口人工验收一遍并如实记录（或明确记为"未做人工验收"）
-- [ ] M6 末态基线表逐项未回退（487 项、68 步 want==got、导出逐字节一致、脱敏四步 0 未豁免）
+- [ ] M6 末态基线表逐项未回退（489 项、68 步 want==got、导出逐字节一致、脱敏四步 0 未豁免）
 - [ ] 若新增功能：先登记 `plan/02` §9 与 `plan/00` 决策，再动代码，并配常驻门
 
 ## 六、关键命令速查

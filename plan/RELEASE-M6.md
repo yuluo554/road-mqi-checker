@@ -44,7 +44,7 @@
 - CI 四矩阵（ubuntu/windows × py3.8/3.12）的 workflow YAML 已有可解析门（`test_gates_workflow.py`）；
   CI 只装 `.[dev]` ⇒ 需要 PySide6 的 4 条桌面壳测试在 CI 上**声明式跳过**（不是静默跳过，
   `pip install road-mqi-checker[gui]` 写在 reason 里）。GUI 通路的真跑证据来自本机双通道
-  （两侧都有 PySide6 6.6.3.1，487 项全过 0 跳过）与干净环境脚本里 `pip install -e ".[gui]"` 之后的复跑；
+  （两侧都有 PySide6 6.6.3.1，489 项全过 0 跳过）与干净环境脚本里 `pip install -e ".[gui]"` 之后的复跑；
 - 品牌隔离：仓库内不提及任何其他工程类工具项目。
 
 ## 四、待办与授权边界

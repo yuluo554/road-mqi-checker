@@ -27,6 +27,26 @@ from road_mqi_checker.ruleset import loader as ruleset_loader
 PKG_NAME = "road-mqi-checker"
 
 
+def ensure_utf8_stream(stream):
+    """把输出流钉成 UTF-8，让同一句话在源码态、`python -m`、管道与重定向里落成同样的字节。
+
+    Windows 控制台/管道默认按 ANSI 代码页编码（CI 的 windows runner 是 cp1252），
+    本项目的拒因与结论里全是中文与箭头字符，跟随代码页会直接抛 UnicodeEncodeError——
+    打包态已由 spec 的 `-X utf8` 解决，源码态在这里补上同一尺度。
+    真控制台不接受重编码时退回 `errors="replace"`：宁可丢一个字，也不让命令崩在输出那一步。
+    """
+    encoding = (getattr(stream, "encoding", None) or "").lower().replace("_", "-")
+    if encoding in ("utf-8", "") or not hasattr(stream, "reconfigure"):
+        return stream
+    for kwargs in ({"encoding": "utf-8"}, {"errors": "replace"}):
+        try:
+            stream.reconfigure(**kwargs)
+            return stream
+        except (ValueError, OSError, LookupError):
+            continue
+    return stream
+
+
 def build_parser():
     # type: () -> argparse.ArgumentParser
     parser = argparse.ArgumentParser(
@@ -669,6 +689,8 @@ def dispatch(args):
 
 def main(argv=None):
     # type: (list) -> int
+    ensure_utf8_stream(sys.stdout)
+    ensure_utf8_stream(sys.stderr)
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

@@ -256,3 +256,42 @@ def test_bench_generate_in_frozen_mode_writes_to_cwd_not_the_bundle(run_cli, mon
     assert cli._bench_out_dir() == os.path.join(os.path.join(repo_root, "data"), "raw")
     # 包内副本（此处用仓库数据代表交付面）逐字节未动
     assert generator.DEFAULT_SEED == 20261007
+
+
+def test_cli_output_is_pinned_to_utf8_on_a_cp1252_console(monkeypatch, repo_root):
+    """CI 的 windows runner 按 cp1252 编码 stdout：中文结论会直接抛 UnicodeEncodeError。
+
+    这条门是 M6 首跑 Windows 矩阵报出来的真缺陷（ubuntu 两腿全绿、windows 两腿同点红）。
+    修法在代码里钉 UTF-8，不在 workflow 里设环境变量 —— 后者只救 CI，救不了西文代码页的用户机器。
+    """
+    buf = io.BytesIO()
+    stream = io.TextIOWrapper(buf, encoding="cp1252", line_buffering=True)
+    err_buf = io.BytesIO()
+    err_stream = io.TextIOWrapper(err_buf, encoding="cp1252", line_buffering=True)
+    monkeypatch.setattr(sys, "stdout", stream)
+    monkeypatch.setattr(sys, "stderr", err_stream)
+    monkeypatch.setenv("RMQC_DATA_DIR", os.path.join(repo_root, "data"))
+
+    rc = cli.main(["selfcheck"])
+
+    stream.flush()
+    assert rc == EXIT_OK, buf.getvalue().decode("utf-8", "replace")
+    text = buf.getvalue().decode("utf-8")  # 落成的是 UTF-8 字节，不是代码页字节
+    assert "系数门" in text and "ruleset" in text
+
+    # 反证（诱饵）：同样的字符串不钉 UTF-8 时，cp1252 流编不出来
+    bait = io.BytesIO()
+    raw = io.TextIOWrapper(bait, encoding="cp1252")
+    with pytest.raises(UnicodeEncodeError):
+        raw.write("规则集包")
+        raw.flush()
+
+
+def test_ensure_utf8_stream_is_polite_about_non_seekable_and_memory_streams():
+    """测试与调用方常用 StringIO 顶替 stdout：没有 reconfigure 就原样返回，不许把测试搞崩。"""
+    from road_mqi_checker.cli import ensure_utf8_stream
+
+    memory = io.StringIO("已有内容")
+    assert ensure_utf8_stream(memory) is memory
+    already = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+    assert ensure_utf8_stream(already) is already

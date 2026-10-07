@@ -84,7 +84,7 @@
 | M3 规则与条款 | 逐格核对原文入库 + 条款映射文档 + 地方差异包 | 每个生效系数有四件套渠道档；核对不过的留 pending 并记已查渠道；`plan/04` 完成 | ✅ 已交付（2026-10-07）：**官方原文不可得** ⇒ 14 格留 pending 并逐渠道留档，`plan/04` 完成，唯一生效格是用户自定容差；省份包不编造 |
 | M4 汇总与年对比 | 三级加权、分级判定、对策规则链、劣化速率与优先序 | "分项不全不冒充完整 MQI"由测试锁定；同分排序稳定；不可比不出变化率 | ✅ 已交付（2026-10-07）：三级同分母可互相复算；partial 不给等级；`uncomparable` 出原因代码且不出变化率；数值通路在夹具包实测（partial 36 / blocked 6 / ok 0），内置包三条路径全拒算 |
 | M5 基准 | 黄金用例 + 四类指标（实到 8 条 × 两通路 = 16 行）+ 一键复现评测 | `plan/06` 有实测数字（指标定义 / 黄金用例 / 复现命令）；README 指标表由 `bench run --json` 生成并逐行对账；干净环境可复现（新 clone + 新 venv 里 `bench generate` + `bench run`） | ✅ 已交付（2026-10-07）：`rmqc bench run` 真跑，今天状态分布 达标 10 / 未达标 0 / 不可判 6 / 不可用 0、整体退出码 0；6 项不可判全部登记在 `evaluation.DECLARED_INDETERMINATE`（门禁对名单内豁免）；M5 出口时 `report` / `gui` 仍是占位符命令，M6 已转真（见下行） |
-| M6 交付与脱敏发布 | PySide6 GUI + 报告导出 + onedir 双 exe + 构建红线断言 + 脱敏 + push | 全历史无真实信息与标准全文；导出与桌面壳可交付；CI 四矩阵首跑全绿 | ✅ 交付面已完成：导出三格式（逐字节一致 + 必带免责声明）、七页签桌面壳与 `--probe`、onedir 双 exe + 构建后五类红线断言、68 步一键交付验证、脱敏四步全过；487 项双通道全绿 0 跳过；占位符登记表 2 → 0（终态）。回执 `plan/07`、`plan/RELEASE-M6.md`、`.tmp_verify/M6/`。**发布面 push / CI 首跑 / tag 待用户授权**；桌面窗口人工验收未做（`plan/HANDOFF-M7`）。**交付面仍不出数**：导出表里数值列/等级列一律留空并写明拒算原因，基准评测在内置包通路上仍报"不可判（分母为 0）" |
+| M6 交付与脱敏发布 | PySide6 GUI + 报告导出 + onedir 双 exe + 构建红线断言 + 脱敏 + push | 全历史无真实信息与标准全文；导出与桌面壳可交付；CI 四矩阵首跑全绿 | ✅ 交付面已完成：导出三格式（逐字节一致 + 必带免责声明）、七页签桌面壳与 `--probe`、onedir 双 exe + 构建后五类红线断言、68 步一键交付验证、脱敏四步全过；489 项双通道全绿 0 跳过；占位符登记表 2 → 0（终态）。回执 `plan/07`、`plan/RELEASE-M6.md`、`.tmp_verify/M6/`。**发布面 push / CI 首跑 / tag 待用户授权**；桌面窗口人工验收未做（`plan/HANDOFF-M7`）。**交付面仍不出数**：导出表里数值列/等级列一律留空并写明拒算原因，基准评测在内置包通路上仍报"不可判（分母为 0）" |
 
 ## 快速开始（当前状态 = M6 交付层进行中：导出与桌面壳已转真）
 
@@ -104,7 +104,7 @@ rmqc --db ledger.sqlite assess --year 2022   # 逐路段 PCI 评定与扣分展�
 rmqc --db ledger.sqlite report --year 2022 --format md --out report.md   # 导出评定报告（内置包下数值列留空，退出码 1）
 rmqc --db ledger.sqlite report --year 2022 --scope plan --out plan.csv   # 优先序清单（不给 --from-year 时 delta 两列留空）
 rmqc gui --probe                             # 桌面壳存活探针：建七页签、逐页转发内核后退出（需 [gui] extras）
-python -m pytest    # 守门测试（py3.8 与 py3.12 双通道各 487 项）
+python -m pytest    # 守门测试（py3.8 与 py3.12 双通道各 489 项）
 ```
 
 `report` 自 M6 起真跑：`--year` 与 `--out` 必填，`--format csv|md|docx` 默认 csv 且 `--out` 后缀要与格式一致，
