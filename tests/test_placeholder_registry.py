@@ -157,8 +157,8 @@ def test_milestone_docs_are_declared():
 
 
 def test_current_milestone_matches_delivered_work():
-    """M4 汇总/对策/年对比已交付：三级加权、规则链、命令面都真跑，里程碑指针随之前进。"""
-    assert _meta.MILESTONE == "M4"
+    """M5 基准评测已交付：两通路指标可算、`bench run` 真跑，里程碑指针随之前进。"""
+    assert _meta.MILESTONE == "M5"
 
 
 def test_pci_kernel_is_no_longer_a_placeholder():
@@ -189,11 +189,22 @@ def test_m4_modules_are_no_longer_placeholders():
     assert callable(mqi_engine.assign_grade)
     assert callable(rules.suggest_actions) and callable(rules.rank_priority)
     assert callable(compare.compare_years) and callable(compare.explain_change)
+
+
+def test_m5_module_is_no_longer_a_placeholder():
+    """M5 交付：基准指标能算、门禁不再抛占位异常，登记表随之前缩到 M6 两项。"""
+    from road_mqi_checker.bench import evaluation
+
+    key = "road_mqi_checker.bench.evaluation"
+    assert key not in _registry(), "%s 仍登记为占位符" % key
+    assert key not in _raised_keys(), "%s 里还有 MilestoneNotImplemented" % key
+    assert callable(evaluation.run) and callable(evaluation.gate)
+    rows = evaluation.run(paths=(evaluation.PATH_BUILTIN,))["metrics"]
+    assert evaluation.gate(rows)["exit"] in (0, 1, 2, 3)
     assert set(_registry()) == {
-        "road_mqi_checker.bench.evaluation",
         "road_mqi_checker.report.exporters",
         "road_mqi_checker.gui.app",
-    }, "占位符登记表应只剩 M5/M6 三个模块"
+    }, "占位符登记表应只剩 M6 两个模块"
 
 
 def test_placeholder_message_is_actionable():

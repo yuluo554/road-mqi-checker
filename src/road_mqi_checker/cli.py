@@ -74,7 +74,7 @@ def build_parser():
     compare_p.add_argument("--to-year", required=True, type=int, dest="year_to")
     compare_p.add_argument("--segment", default=None, help="只对比该路段；省略则对比两个年度都在台账里的路段")
 
-    bench_p = sub.add_parser("bench", help="合成数据（M1 已可用）与基准评测（M5）")
+    bench_p = sub.add_parser("bench", help="合成数据（M1 已可用）与基准评测（M5 已可用）")
     bench_p.add_argument("action", choices=["generate", "run"])
     bench_p.add_argument("--seed", type=int, default=None)
     bench_p.add_argument("--out", default=None)
@@ -316,8 +316,16 @@ def cmd_bench(args):
         ]
         _print(payload, args.as_json, lines=lines)
         return EXIT_OK
-    evaluation.gate(evaluation.initial_metric_table())
-    return EXIT_OK
+    from road_mqi_checker.bench import generator as bench_generator
+
+    if args.seed is not None and args.seed != bench_generator.DEFAULT_SEED:
+        raise InputUnavailable(
+            "基准评测定义在冻结演示数据上（seed=%d）；换 seed 要先把演示数据一起重生成并单独提交"
+            % bench_generator.DEFAULT_SEED
+        )
+    payload = evaluation.run()
+    _print(payload, args.as_json, lines=evaluation.report_lines(payload))
+    return payload["gate"]["exit"]
 
 
 def cmd_assess(args):

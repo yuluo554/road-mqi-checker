@@ -8,12 +8,11 @@ PLACEHOLDER_MILESTONES 是"骨架里哪些模块还是占位符"的唯一事实�
 
 from typing import Dict
 
-MILESTONE = "M4"
+MILESTONE = "M5"
 __version__ = "0.0.0"
 
 # 模块路径（相对包根）→ 该模块领域逻辑的交付里程碑
 PLACEHOLDER_MILESTONES = {
-    "road_mqi_checker.bench.evaluation": "M5",
     "road_mqi_checker.report.exporters": "M6",
     "road_mqi_checker.gui.app": "M6",
 }  # type: Dict[str, str]

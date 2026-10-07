@@ -83,13 +83,12 @@ def test_selfcheck_fails_when_data_dir_missing(run_cli, tmp_path, monkeypatch):
 
 
 def test_placeholder_commands_return_unimplemented(run_cli):
-    """M4 之后仍未实现的命令必须返回 3 并指明里程碑（不许假成功）。
+    """M5 之后仍未实现的命令必须返回 3 并指明里程碑（不许假成功）。
 
-    M1 交付 `import` / `bench generate`、M2 交付 `assess`、M4 交付 `aggregate` / `compare`，
-    均不在此列（真跑语义见 `test_m4_cli.py`）。
+    M1 交付 `import` / `bench generate`、M2 交付 `assess`、M4 交付 `aggregate` / `compare`、
+    M5 交付 `bench run`（真跑语义见 `test_m5_bench.py`），均不在此列。
     """
     for argv in (
-        ["bench", "run"],
         ["report", "--out", "x.csv"],
     ):
         rc, _out, err = run_cli(argv)
@@ -177,7 +176,36 @@ def test_metric_state_to_exit_mapping_is_locked():
     assert evaluation.STATE_TO_EXIT[evaluation.METRIC_UNAVAILABLE] == EXIT_UNIMPLEMENTED
 
 
-def test_skeleton_metric_table_is_all_unavailable():
-    table = evaluation.initial_metric_table()
-    assert table and all(row["state"] == evaluation.METRIC_UNAVAILABLE for row in table)
-    assert all(row["value"] is None for row in table)
+def test_metric_table_is_four_states_with_two_paths_of_numbers():
+    """M5 重写的骨架门：原先断言"全部不可用"，现在断言两通路的真实四态与实测值。
+
+    骨架期这张表全填"不可用"（内核未实现）。M5 之后必须换成：
+    内置包 = 通路存在但不出数（数值类不可判、分母 0）；夹具包 = 出数并可复算；
+    一行都不许停在"不可用"上，也不许把不可判挤成达标。
+    """
+    table = evaluation.run()
+    rows = dict((evaluation.row_key(row), row) for row in table["metrics"])
+    assert len(table["metrics"]) == 2 * len(evaluation.METRICS)
+    assert [row for row in table["metrics"] if row["state"] == evaluation.METRIC_UNAVAILABLE] == []
+
+    for metric in ("rescore_drift", "contribution_order", "aggregation_consistency", "change_contribution_order"):
+        row = rows["%s|%s" % (metric, evaluation.PATH_BUILTIN)]
+        assert row["state"] == evaluation.METRIC_INDETERMINATE, row
+        assert row["numerator"] == 0 and row["denominator"] == 0, row
+        assert row["declared_indeterminate"] is True, row
+    for metric in ("anomaly_recall", "anomaly_false_alarm", "byte_reproducible"):
+        assert rows["%s|%s" % (metric, evaluation.PATH_BUILTIN)]["state"] == evaluation.METRIC_PASS, metric
+    assert rows["grade_accuracy|%s" % evaluation.PATH_BUILTIN]["state"] == evaluation.METRIC_INDETERMINATE
+    assert rows["grade_accuracy|%s" % evaluation.PATH_FIXTURE]["state"] == evaluation.METRIC_INDETERMINATE
+
+    fixture = dict(
+        (row["metric"], row)
+        for row in table["metrics"]
+        if row["path"] == evaluation.PATH_FIXTURE
+    )
+    assert fixture["rescore_drift"]["value"] == 0.0, fixture["rescore_drift"]
+    assert fixture["contribution_order"]["state"] == evaluation.METRIC_PASS, fixture["contribution_order"]
+    assert fixture["change_contribution_order"]["state"] == evaluation.METRIC_PASS
+    assert fixture["aggregation_consistency"]["state"] == evaluation.METRIC_PASS
+    assert fixture["byte_reproducible"]["state"] == evaluation.METRIC_PASS
+    assert table["gate"]["exit"] == evaluation.STATE_TO_EXIT[evaluation.METRIC_PASS]

@@ -11,7 +11,7 @@ import re
 import pytest
 
 from road_mqi_checker import cli, privacy
-from road_mqi_checker.bench import generator
+from road_mqi_checker.bench import evaluation, generator
 from road_mqi_checker.errors import InputUnavailable, PrivacyViolation
 from road_mqi_checker.ledger import checks, db, importer
 from road_mqi_checker.ruleset import loader as ruleset_loader
@@ -21,15 +21,9 @@ RAW_DIR = os.path.join(REPO, "data", "raw")
 TRUTH_DIR = os.path.join(REPO, "data", "truth")
 SCRATCH = os.path.join(REPO, ".tmp_m1")
 
-#: 真值注入类别 → 该由哪一项校验（或哪条拒因）检出
-CELL_KIND_BY_ISSUE = {
-    "gap_chain": "stake_gap",
-    "overlap_chain": "stake_overlap",
-    "unit_error": "unit_consistency",
-    "negative_value": "value_range",
-    "out_of_range": "value_range",
-    "duplicate_import": "duplicate_import",
-}
+#: 真值注入类别 → 该由哪一项校验（或哪条拒因）检出。
+#: 词汇单点定义在 `bench.evaluation`（M5 起 `bench run` 的召回分母用同一张表）。
+CELL_KIND_BY_ISSUE = evaluation.EXPECTED_KIND_BY_ISSUE
 CELL_KINDS = set(CELL_KIND_BY_ISSUE.values())
 
 #: 跨年划分变更的期望集：按 PARTITION_PLAN 的几何逐对推出（写在测试里，不从校验器输出反推）
