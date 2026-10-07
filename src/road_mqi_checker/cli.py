@@ -83,13 +83,48 @@ def build_parser():
     report_p = sub.add_parser("report", help="报告与清单导出（M6）")
     report_p.add_argument("--format", default="csv", choices=list(exporters.FORMATS))
     report_p.add_argument("--out", default=None, required=True, help="导出文件路径")
+    report_p.add_argument("--year", required=True, type=int, help="导出对象所属年度")
+    report_p.add_argument(
+        "--level", default="route", choices=list(mqi_engine.AGGREGATION_LEVELS), help="汇总表用的汇总层级"
+    )
+    report_p.add_argument(
+        "--scope",
+        default="assessment",
+        choices=["assessment", "plan"],
+        help="assessment=评定结果报告（台账概况+PCI+MQI）；plan=对策优先序清单",
+    )
+    report_p.add_argument(
+        "--from-year",
+        default=None,
+        type=int,
+        dest="year_from",
+        help="优先序清单的变化率列取该年度→--year 的对比结果；省略则这两列留空",
+    )
 
-    sub.add_parser("gui", help="启动桌面壳（M6，需 [gui] extras）")
+    gui_p = sub.add_parser("gui", help="启动桌面壳（M6，需 [gui] extras）")
+    gui_p.add_argument(
+        "--probe",
+        action="store_true",
+        help="只构建主窗口与七页签并立即退出（CI / 干净环境存活探针，不进事件循环）",
+    )
     return parser
 
 
 def _connect(args):
     return ledger_db.connect(args.db if args.db else ":memory:")
+
+
+def _bench_out_dir():
+    """`bench generate` 缺省落点：源码态写仓库 `data/raw`，冻结态写当前工作目录。
+
+    打包态的 `find_data_dir()` 命中的是包内只读的演示数据副本（交付面），
+    把重生成结果写进自己的包里会让"内嵌数据与仓库逐份一致"这条红线失效。
+    """
+    from road_mqi_checker.data_paths import is_frozen
+
+    if is_frozen():
+        return os.path.join(os.getcwd(), "data", "raw")
+    return os.path.join(find_data_dir(start=os.getcwd()), "raw")
 
 
 def _prepared(args):
@@ -283,7 +318,7 @@ def cmd_bench(args):
         seed = generator.DEFAULT_SEED if args.seed is None else args.seed
         if seed < 0:
             raise InputUnavailable("seed 必须是非负整数，收到 %d" % seed)
-        out_dir = args.out if args.out else os.path.join(find_data_dir(start=os.getcwd()), "raw")
+        out_dir = args.out if args.out else _bench_out_dir()
         result = generator.generate(out_dir, seed=seed, force=args.force)
         scoring_pending = generator.scoring_gate_pending_keys(ruleset_loader.select_ruleset())
         gate_notes = generator.truth_gate_notes(ruleset_loader.select_ruleset())
@@ -530,13 +565,87 @@ def cmd_compare(args):
 
 
 def cmd_report(args):
-    exporters.export_priority_list(args.out, args.format, [])
-    return EXIT_OK
+    from road_mqi_checker.pci import engine as pci_engine
+    from road_mqi_checker.strategy import compare, rules
+
+    conn, ruleset = _prepared(args)
+    pci_results = list(pci_engine.assess_year(conn, args.year, ruleset))
+    if not pci_results:
+        raise InputUnavailable(
+            "台账里 %s 年度没有路段行，报告无内容可导（先 rmqc import --file ... --year %s）"
+            % (args.year, args.year)
+        )
+    mqi_results = list(mqi_engine.aggregate_year(conn, args.year, pci_results, ruleset, level=args.level))
+    suggestions = rules.rank_priority(
+        rules.suggest_actions(conn, args.year, pci_results, mqi_results, ruleset), "pci", True
+    )
+    payload = {
+        "scope": args.scope,
+        "format": args.format,
+        "year": args.year,
+        "level": args.level,
+        "ruleset": {"ruleset_id": ruleset.ruleset_id, "version": ruleset.version},
+        "counts": pci_engine.summarize_status(pci_results),
+    }
+    if args.scope == "plan":
+        compare_results = []
+        if args.year_from is not None:
+            combined = list(pci_engine.assess_year(conn, args.year_from, ruleset))
+            combined.extend(pci_results)
+            segment_ids = compare.segment_ids_in_ledger(conn, args.year_from, args.year)
+            compare_results = [
+                compare.result_payload(
+                    compare.compare_years(conn, segment_id, args.year_from, args.year, combined, ruleset)
+                )
+                for segment_id in segment_ids
+            ]
+        rows = exporters.plan_rows(
+            [rules.result_payload(item) for item in suggestions],
+            pci_results=[pci_engine.result_payload(item) for item in pci_results],
+            compare_results=compare_results,
+            from_year=args.year_from,
+        )
+        result = exporters.export_priority_list(args.out, args.format, rows)
+        payload["from_year"] = args.year_from
+        payload["export"] = result
+        payload["row_count"] = len(rows)
+        lines = [
+            "优先序清单导出：%s（%s 格式，%d 行，%d 字节）"
+            % (result["path"], args.format, len(rows), result["bytes"]),
+            "行序来自 `rank_priority`，导出层不重排；blocked 行原样保留、数值列留空。",
+        ]
+        if args.year_from is None:
+            lines.append("未给 --from-year：delta 与 deterioration_rate_per_year 两列留空（不做推测性摊分）。")
+    else:
+        snapshot = exporters.build_ledger_snapshot(conn, args.year, ruleset, db=args.db)
+        result = exporters.export_assessment_report(
+            args.out,
+            args.format,
+            snapshot,
+            [pci_engine.result_payload(item) for item in pci_results],
+            [mqi_engine.result_payload(item) for item in mqi_results],
+        )
+        payload["export"] = result
+        lines = [
+            "评定报告导出：%s（%s 格式，%d 张表，%d 字节）"
+            % (result["path"], args.format, result["tables"], result["bytes"]),
+            "内容：台账概况 + %d 个路段 PCI + %d 个 %s 级汇总对象，末尾挂固定免责声明。"
+            % (len(pci_results), len(mqi_results), args.level),
+        ]
+    for item in pci_results:
+        if item.status != STATUS_OK:
+            lines.append("注：blocked/partial 对象的数值列在导出里留空（不是 0），拒算原因随行给出。")
+            break
+    _print(payload, args.as_json, lines=lines)
+    # 退出码口径（plan/02 §6）：导出成功但存在降级对象 = 1
+    degraded = any(item.status != STATUS_OK for item in pci_results) or any(
+        item.status != STATUS_OK for item in mqi_results
+    )
+    return EXIT_DEGRADED if degraded else EXIT_OK
 
 
 def cmd_gui(args):
-    gui_app.main()
-    return EXIT_OK
+    return gui_app.main(["--probe"] if args.probe else [])
 
 
 _HANDLERS = {

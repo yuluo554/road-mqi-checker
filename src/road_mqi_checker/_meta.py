@@ -8,14 +8,13 @@ PLACEHOLDER_MILESTONES 是"骨架里哪些模块还是占位符"的唯一事实�
 
 from typing import Dict
 
-MILESTONE = "M5"
+MILESTONE = "M6"
 __version__ = "0.0.0"
 
-# 模块路径（相对包根）→ 该模块领域逻辑的交付里程碑
-PLACEHOLDER_MILESTONES = {
-    "road_mqi_checker.report.exporters": "M6",
-    "road_mqi_checker.gui.app": "M6",
-}  # type: Dict[str, str]
+# 模块路径（相对包根）→ 该模块领域逻辑的交付里程碑。
+# M6 起交付层（报告导出 / 桌面壳）全部转真：空登记表是本项目终态，由
+# tests/test_placeholder_registry.py 的 M6 门双向锁定（不许有幽灵占位符）。
+PLACEHOLDER_MILESTONES = {}  # type: Dict[str, str]
 
 # 里程碑 → 该里程碑的出口判据主文档（plan/ 下，编号见 plan/00 索引）
 MILESTONE_DOCS = {

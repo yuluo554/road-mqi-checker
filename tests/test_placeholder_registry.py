@@ -157,8 +157,9 @@ def test_milestone_docs_are_declared():
 
 
 def test_current_milestone_matches_delivered_work():
-    """M5 基准评测已交付：两通路指标可算、`bench run` 真跑，里程碑指针随之前进。"""
-    assert _meta.MILESTONE == "M5"
+    """M6 交付层已转真：导出三格式与桌面壳探针真跑，里程碑指针走到末态。"""
+    assert _meta.MILESTONE == "M6"
+    assert _meta.MILESTONE_DOCS[_meta.MILESTONE] == "plan/07-交付与打包.md"
 
 
 def test_pci_kernel_is_no_longer_a_placeholder():
@@ -201,10 +202,52 @@ def test_m5_module_is_no_longer_a_placeholder():
     assert callable(evaluation.run) and callable(evaluation.gate)
     rows = evaluation.run(paths=(evaluation.PATH_BUILTIN,))["metrics"]
     assert evaluation.gate(rows)["exit"] in (0, 1, 2, 3)
-    assert set(_registry()) == {
-        "road_mqi_checker.report.exporters",
-        "road_mqi_checker.gui.app",
-    }, "占位符登记表应只剩 M6 两个模块"
+
+
+def test_m6_delivery_modules_are_no_longer_placeholders():
+    """M6 交付：导出与桌面壳转真后登记表必须清空 —— 空表是终态，由本门双向锁死。"""
+    from road_mqi_checker.gui import app as gui_app
+    from road_mqi_checker.report import exporters
+
+    for key in ("road_mqi_checker.report.exporters", "road_mqi_checker.gui.app"):
+        assert key not in _registry(), "%s 仍登记为占位符" % key
+        assert key not in _raised_keys(), "%s 里还有 MilestoneNotImplemented" % key
+    assert _registry() == {}, "M6 之后不该再有任何占位符模块"
+    assert callable(exporters.export_priority_list) and callable(exporters.export_assessment_report)
+    assert callable(exporters.plan_rows) and callable(exporters.assert_export_safe)
+    assert callable(gui_app.build_window) and callable(gui_app.run_kernel) and callable(gui_app.build_argv)
+
+    # 真跑一遍导出：转真不是"函数存在"而是"能落盘且带免责声明"
+    rows = exporters.plan_rows(
+        [
+            {
+                "segment_id": "S99-A1",
+                "route_id": "S99",
+                "year": 2022,
+                "status": "blocked",
+                "blocked_reason": "系数未核对，应核实",
+                "pci": None,
+                "mqi_partial": None,
+                "rule_id": "",
+                "clause": "",
+                "action_class": None,
+                "scale_band": None,
+                "triggered_by": None,
+            }
+        ]
+    )
+    import os
+    import tempfile
+
+    from road_mqi_checker.report import disclaimer
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for fmt in exporters.FORMATS:
+            path = os.path.join(tmp, "plan." + fmt)
+            assert exporters.export_priority_list(path, fmt, rows)["bytes"] > 0
+            text = open(path, "rb").read().decode("utf-8", "replace")
+            if fmt != "docx":
+                assert text.rstrip().endswith(disclaimer.DATA_CLASS_NOTE)
 
 
 def test_placeholder_message_is_actionable():
@@ -244,7 +287,9 @@ def test_no_ghost_modules_in_package():
         "strategy.compare",
         "report",
         "report.disclaimer",
+        "report.exporters",
         "gui",
+        "gui.app",
         "bench",
         "bench.rng",
         "bench.generator",

@@ -82,27 +82,56 @@ def test_selfcheck_fails_when_data_dir_missing(run_cli, tmp_path, monkeypatch):
     assert rc == EXIT_DEGRADED
 
 
-def test_placeholder_commands_return_unimplemented(run_cli):
-    """M5 之后仍未实现的命令必须返回 3 并指明里程碑（不许假成功）。
+def test_report_command_is_no_longer_an_unimplemented_placeholder(run_cli, tmp_path, monkeypatch):
+    """M6 转真：`report` 不再返回 3。
 
-    M1 交付 `import` / `bench generate`、M2 交付 `assess`、M4 交付 `aggregate` / `compare`、
-    M5 交付 `bench run`（真跑语义见 `test_m5_bench.py`），均不在此列。
+    这里用"未导入数据的内存台账"跑，所以期望 2（输入不可用）——
+    关键断言是**退出码不等于 3 且拒因里没有"尚未实现"**；导出真跑的三格式与
+    字节一致由 `tests/test_m6_report.py` 覆盖。
     """
-    for argv in (
-        ["report", "--out", "x.csv"],
-    ):
+    monkeypatch.chdir(tmp_path)
+    rc, _out, err = run_cli(["report", "--year", "2022", "--out", "r.csv"])
+    assert rc != EXIT_UNIMPLEMENTED, (rc, err)
+    assert rc == EXIT_INPUT_UNUSABLE, (rc, err)
+    assert "尚未实现" not in err
+
+
+def test_no_command_in_the_surface_returns_the_unimplemented_code(run_cli, tmp_path, monkeypatch):
+    """交付面终态：命令面上任何一条命令都不该再落 3（占位符时代结束）。"""
+    monkeypatch.chdir(tmp_path)
+    probes = (
+        ["version"],
+        ["selfcheck"],
+        ["ruleset", "list"],
+        ["ledger", "tables"],
+        ["assess", "--year", "2022"],
+        ["aggregate", "--year", "2022"],
+        ["compare", "--from-year", "2022", "--to-year", "2023"],
+        ["bench", "run"],
+        ["report", "--year", "2022", "--out", "r.md"],
+        ["gui", "--probe"],
+    )
+    for argv in probes:
         rc, _out, err = run_cli(argv)
-        assert rc == EXIT_UNIMPLEMENTED, (argv, rc, err)
-        assert "计划交付里程碑" in err, (argv, err)
+        assert rc != EXIT_UNIMPLEMENTED, (argv, rc, err)
 
 
-def test_unimplemented_message_names_the_milestone(run_cli):
-    _rc, _out, err = run_cli(["report", "--out", "x.csv"])
-    assert "M6" in err
+def test_unimplemented_code_machinery_is_still_reserved_for_future_skeletons():
+    """登记表为空不等于机制删掉：3 号退出码仍只由 MilestoneNotImplemented 产生。"""
+    from road_mqi_checker import _meta
+    from road_mqi_checker.errors import MilestoneNotImplemented
+
+    assert _meta.PLACEHOLDER_MILESTONES == {}
+    exc = MilestoneNotImplemented("road_mqi_checker.x.demo", "M7", what="示例模块")
+    assert exc.exit_code_value() == EXIT_UNIMPLEMENTED
+    assert "M7" in str(exc) and "尚未实现" in str(exc)
 
 
-def test_gui_command_reports_dependency_or_unimplemented(run_cli, repo_root):
-    """装了 PySide6 → 3（未实现）；没装 → 1（缺可选依赖，给安装提示）。两个分支都要有明确码。"""
+def test_gui_command_probe_reports_success_or_missing_extras(run_cli, repo_root):
+    """转真后的双向断言：装了 PySide6 → 探针 0（七页签真跑内核）；没装 → 1（给 extras 提示）。
+
+    探针模式（`--probe`）不进事件循环，所以可以在无显示环境与 CI 里常驻执行。
+    """
     from road_mqi_checker.gui import app as gui_app
 
     try:
@@ -110,8 +139,8 @@ def test_gui_command_reports_dependency_or_unimplemented(run_cli, repo_root):
         installed = True
     except Exception:
         installed = False
-    rc, _out, err = run_cli(["gui"])
-    assert rc == (EXIT_UNIMPLEMENTED if installed else EXIT_DEGRADED), (rc, err)
+    rc, _out, err = run_cli(["gui", "--probe"])
+    assert rc == (EXIT_OK if installed else EXIT_DEGRADED), (rc, err)
     if not installed:
         assert "[gui]" in err
 
@@ -209,3 +238,21 @@ def test_metric_table_is_four_states_with_two_paths_of_numbers():
     assert fixture["aggregation_consistency"]["state"] == evaluation.METRIC_PASS
     assert fixture["byte_reproducible"]["state"] == evaluation.METRIC_PASS
     assert table["gate"]["exit"] == evaluation.STATE_TO_EXIT[evaluation.METRIC_PASS]
+
+
+def test_bench_generate_in_frozen_mode_writes_to_cwd_not_the_bundle(run_cli, monkeypatch, tmp_path, repo_root):
+    """打包态重生成演示数据不许写进自己的包：内嵌副本必须与仓库逐份对得上。"""
+    from road_mqi_checker import data_paths
+    from road_mqi_checker.bench import generator
+
+    monkeypatch.setattr(data_paths, "is_frozen", lambda: True)
+    monkeypatch.chdir(tmp_path)
+    rc, out, err = run_cli(["bench", "generate"])
+    assert rc == EXIT_OK, (rc, err)
+    frozen_target = tmp_path / "data" / "raw"
+    assert frozen_target.is_dir() and len(list(frozen_target.glob("*.csv"))) == 12
+    # 源码态的缺省落点仍然是仓库 data/raw（同一函数两种形态各管一头）
+    monkeypatch.setattr(data_paths, "is_frozen", lambda: False)
+    assert cli._bench_out_dir() == os.path.join(os.path.join(repo_root, "data"), "raw")
+    # 包内副本（此处用仓库数据代表交付面）逐字节未动
+    assert generator.DEFAULT_SEED == 20261007
