@@ -77,6 +77,7 @@ class DeductContribution(object):
         "clause",
         "deducted_points",
         "share",
+        "source_row_no",
     )
 
     def __init__(
@@ -90,6 +91,7 @@ class DeductContribution(object):
         clause="",            # type: str
         deducted_points=None, # type: Optional[float]
         share=None,           # type: Optional[float]
+        source_row_no=None,   # type: Optional[int]
     ):
         self.source_kind = source_kind
         self.distress_type = distress_type
@@ -100,6 +102,9 @@ class DeductContribution(object):
         self.clause = clause
         self.deducted_points = deducted_points
         self.share = share
+        # 台账行号即原始检测表的数据行序（ledger.importer.read_table 的编号语义），
+        # 展开视图靠它回指到用户手里的那份文件
+        self.source_row_no = source_row_no
 
     def check_contract(self):
         # type: () -> None
@@ -107,6 +112,8 @@ class DeductContribution(object):
             raise ContractViolation("扣分贡献项必须挂规则集系数 key（可追溯到某一格系数）")
         if not self.clause:
             raise ContractViolation("扣分贡献项必须挂条款号/表号")
+        if self.source_kind == "distress" and self.source_row_no is None:
+            raise ContractViolation("破损贡献项必须回指台账行号，否则无法核到原始检测表的哪一行")
 
 
 class PciResult(_BaseResult):

@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "pci-fixture-cement",
+  "version": "0.0.0-fixture",
+  "title": "水泥混凝土路面 PCI 换算夹具（只允许出现在 tests/fixtures）",
+  "applies_to": {
+    "province": "fixture",
+    "year": "fixture",
+    "surface_type": "cement"
+  },
+  "notes": "数值与沥青夹具刻意不同，用来证明换算走的是所选规则集包本身；全部为夹具数，不是规范事实。",
+  "coefficients": [
+    {
+      "key": "deduct_ratio.cement_distress",
+      "kind": "deduct_ratio",
+      "surface_type": "cement",
+      "status": "fixture",
+      "values": {
+        "ratios": {
+          "破碎板": {"轻": 0.1, "中": 0.2, "重": 0.35},
+          "板角断裂": {"轻": 0.1, "中": 0.2, "重": 0.35},
+          "坑洞": {"轻": 0.1, "中": 0.2, "重": 0.35},
+          "错台": {"轻": 0.1, "中": 0.2, "重": 0.35},
+          "隆起": {"轻": 0.1, "中": 0.2, "重": 0.35},
+          "裂缝": {"轻": 0.02, "中": 0.04, "重": 0.08},
+          "板边剥落": {"轻": 0.02, "中": 0.04, "重": 0.08},
+          "接缝料损坏": {"轻": 0.02, "中": 0.04, "重": 0.08}
+        }
+      },
+      "unit": "扣分比率（0～1，按破损类型×程度逐格）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具表 A-2",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-cement.json",
+          "note": "按板数计的分母是路段板块总数，按长度计的分母是路段长度 × 车道数"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-cement.json",
+      "note": ""
+    },
+    {
+      "key": "pci_component.ride_quality",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {"weight": 25.0},
+      "unit": "分项权重（行驶质量）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 B-1c",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-cement.json",
+          "note": "分项得分直接取实测 RQI 指数"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-cement.json",
+      "note": ""
+    },
+    {
+      "key": "pci_component.rutting",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {"weight": 15.0, "ideal_mm": 2.0, "zero_mm": 18.0},
+      "unit": "分项权重与车辙换算端点",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 B-2c",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-cement.json",
+          "note": "水泥路面是否有该分项要按原文确认；缺测时引擎转 partial 而不是补一个 0"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-cement.json",
+      "note": ""
+    },
+    {
+      "key": "pci_component.skid_resistance",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {"weight": 15.0, "zero_value": 20.0, "ideal_value": 60.0},
+      "unit": "分项权重与抗滑换算端点",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 B-3c",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-cement.json",
+          "note": "抗滑指标量纲由数据的 skid_indicator_kind 决定（SFC/BPN）"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-cement.json",
+      "note": ""
+    },
+    {
+      "key": "pci_weight.cement",
+      "kind": "component_weight",
+      "surface_type": "cement",
+      "status": "fixture",
+      "values": {"weights": {"distress": 45.0, "ride_quality": 25.0, "rutting": 15.0, "skid_resistance": 15.0}},
+      "unit": "PCI 合成分项权重",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 C-2",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-cement.json",
+          "note": "权重和不必为 100，引擎按参与分项的权重和归一"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-cement.json",
+      "note": ""
+    },
+    {
+      "key": "grade_threshold.pci",
+      "kind": "grade_threshold",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {
+        "boundary": "lower_exclusive",
+        "bands": [
+          {"grade": "优", "min": 91.0},
+          {"grade": "良", "min": 78.5},
+          {"grade": "中", "min": 63.25},
+          {"grade": "次", "min": 48.5},
+          {"grade": "差", "min": 0.0}
+        ]
+      },
+      "unit": "分级阈值（五档下界，开区间）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具表 D-2",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-cement.json",
+          "note": "本包刻意用 lower_exclusive，让含界与否在测试里可被区分"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-cement.json",
+      "note": ""
+    }
+  ]
+}

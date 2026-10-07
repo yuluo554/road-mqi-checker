@@ -21,6 +21,7 @@ from road_mqi_checker.ledger import db as ledger_db
 from road_mqi_checker.ledger import importer
 from road_mqi_checker.mqi import engine as mqi_engine
 from road_mqi_checker.report import exporters
+from road_mqi_checker.results import STATUS_BLOCKED, STATUS_OK, STATUS_PARTIAL
 from road_mqi_checker.ruleset import loader as ruleset_loader
 
 PKG_NAME = "road-mqi-checker"
@@ -60,7 +61,7 @@ def build_parser():
         help="数据类别声明：SYNTHETIC 受白名单约束，user 是你自己的真实台账；文件头有标记时以此为准",
     )
 
-    assess_p = sub.add_parser("assess", help="逐路段 PCI 评定（M2）")
+    assess_p = sub.add_parser("assess", help="逐路段 PCI 评定与扣分展开（M2 已可用）")
     assess_p.add_argument("--year", required=True, type=int)
     assess_p.add_argument("--segment", default=None, help="只评定该路段；省略则评定该年度全部路段")
 
@@ -271,7 +272,12 @@ def cmd_bench(args):
             ),
             "注入分布：" + ", ".join("%s x%d" % (key, totals["by_issue"][key]) for key in sorted(totals["by_issue"])),
             "干净对照格子：" + ", ".join(totals["clean_cells"]),
-            "真值四列当前一律为 pending 令牌（生效系数 0 格，未核对不出数）。",
+            "真值四列："
+            + (
+                "一律为 pending 令牌（生效系数 0 格，未核对不出数）。"
+                if ruleset_loader.select_ruleset().summary()["computable"] == 0
+                else "评分列由评定引擎算出数值；引擎拒算的对象仍写 pending 令牌。"
+            ),
         ]
         _print(payload, args.as_json, lines=lines)
         return EXIT_OK
@@ -280,11 +286,52 @@ def cmd_bench(args):
 
 
 def cmd_assess(args):
-    from road_mqi_checker.pci import engine
+    from road_mqi_checker.pci import engine, trace
 
     conn, ruleset = _prepared(args)
-    engine.compute_segment_pci(conn, args.segment or "", args.year, ruleset)
-    return EXIT_OK
+    results = engine.assess_year(conn, args.year, ruleset, segment_id=args.segment)
+    counts = engine.summarize_status(results)
+    payload = {
+        "year": args.year,
+        "segment": args.segment,
+        "ruleset": {"ruleset_id": ruleset.ruleset_id, "version": ruleset.version},
+        "counts": counts,
+        "results": [engine.result_payload(result) for result in results],
+    }
+    lines = [
+        "PCI 评定：%s 年度共 %d 个路段（ok %d / partial %d / blocked %d），规则集 %s v%s"
+        % (
+            args.year,
+            len(results),
+            counts[STATUS_OK],
+            counts[STATUS_PARTIAL],
+            counts[STATUS_BLOCKED],
+            ruleset.ruleset_id,
+            ruleset.version,
+        )
+    ]
+    for result in results:
+        if result.status == STATUS_OK or result.status == STATUS_PARTIAL:
+            lines.append(
+                "  %s/%s %s PCI=%s 等级=%s 扣分合计=%s%s"
+                % (
+                    result.segment_id,
+                    result.year,
+                    result.status,
+                    result.pci,
+                    result.grade,
+                    result.deducted_total,
+                    "（%s）" % result.scope_note if result.scope_note else "",
+                )
+            )
+            lines.extend(trace.report_lines(result, limit=3))
+        else:
+            lines.append("  %s/%s %s：%s" % (result.segment_id, result.year, result.status, result.blocked_reason))
+    if counts[STATUS_BLOCKED]:
+        lines.append("注：blocked 项的数值字段一律为空，不是 0 —— 系数未核对或台账含检出异常行时不出数。")
+    _print(payload, args.as_json, lines=lines)
+    # 退出码口径（plan/02 §6）：存在 blocked/partial/uncomparable = 1 降级完成
+    return EXIT_DEGRADED if any(result.status != STATUS_OK for result in results) else EXIT_OK
 
 
 def cmd_aggregate(args):

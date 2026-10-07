@@ -35,10 +35,13 @@
 
 3. **分数算得对**（`pci_truth` / `grade_truth` / `mqi_partial_truth` / `recommended_action_truth`）：
    生成器先查**规则集系数门**——本列受哪几格系数支配、那些格子是否 `computable`。
-   M1 时内置包 15 格全为 pending，所以四列一律写 `pending:coeff=<key>,<key>` 令牌：
-   **未核对不出数，真值也一样不出数**。待 M2 的 `pci.engine` 与 M3 的已核对系数就位，
-   同一 seed 重跑即自动变成数值真值，且数值来自评定引擎本身（同一个实现，不另写一套公式），
-   从而不会出现"真值一份公式、引擎另一份公式"的假对账。
+   内置包 15 格全为 pending，所以四列一律写 `pending:coeff=<key>,<key>` 令牌：
+   **未核对不出数，真值也一样不出数**。M2 起数值真值由评定引擎本身给出
+   （`_numeric_truth_probe` → `pci.engine.compute_pci`，与 `rmqc assess` 同一个内核），
+   换上一套系数已核对的规则集包，同一 seed 重跑这两列自动变数值；
+   引擎因数据异常拒算的对象仍写 `pending:engine=pci.engine.blocked`，
+   所属模块还是占位符的列（M4 的 mqi / 对策）写 `pending:engine=<模块>@M4`。
+   生成器内**永不另写一套扣分公式**，避免出现"真值一份公式、引擎另一份公式"的假对账。
 
 ## 落盘纪律
 
@@ -52,8 +55,8 @@ from typing import Dict, List, Optional, Tuple
 
 from road_mqi_checker import privacy
 from road_mqi_checker.bench.rng import SplitMix64
-from road_mqi_checker.errors import InputUnavailable, MilestoneNotImplemented
-from road_mqi_checker.ledger import models
+from road_mqi_checker.errors import InputUnavailable
+from road_mqi_checker.ledger import importer, models
 from road_mqi_checker.pci import engine as pci_engine
 from road_mqi_checker.ruleset import loader as ruleset_loader
 
@@ -685,31 +688,111 @@ def ruleset_pending_keys(ruleset, templates, surface_type):
     return sorted(pending)
 
 
-def _score_truth(surface_type, ruleset):
-    # type: (str, object) -> Dict[str, str]
+def _score_truth(surface_type, ruleset, probe_input):
+    # type: (str, object, Dict[str, object]) -> Dict[str, str]
     """真值四列：先过系数门，未核对一律出 pending 令牌（未核对不出数，真值也不出数）。"""
     out = {}  # type: Dict[str, str]
-    for column in ("pci_truth", "grade_truth", "mqi_partial_truth", "recommended_action_truth"):
+    for column in TRUTH_SCORE_COLUMNS:
         pending = ruleset_pending_keys(ruleset, TRUTH_GOVERNING_KEYS[column], surface_type)
         if pending:
             out[column] = PENDING_COEFF_PREFIX + ",".join(pending)
         else:
-            out[column] = _numeric_truth_probe(surface_type)
+            out[column] = _numeric_truth_probe(column, surface_type, ruleset, probe_input)
     return out
 
 
-def _numeric_truth_probe(surface_type):
-    # type: (str) -> str
-    """数值真值通路：必须由评定引擎本身给出（同源），引擎未就位则如实标 pending。
+#: 真值四列 → 该列数值由哪个模块给出（该模块还是占位符时，这一列如实标 pending:engine=…@Mx）
+TRUTH_ENGINE_MODULES = {
+    "pci_truth": "road_mqi_checker.pci.engine",
+    "grade_truth": "road_mqi_checker.pci.engine",
+    "mqi_partial_truth": "road_mqi_checker.mqi.engine",
+    "recommended_action_truth": "road_mqi_checker.strategy.rules",
+}
+TRUTH_SCORE_COLUMNS = ("pci_truth", "grade_truth", "mqi_partial_truth", "recommended_action_truth")
+PCI_TRUTH_COLUMNS = ("pci_truth", "grade_truth")
 
-    M1 走不到这一支（内置包 15 格全 pending）。M2 起由评定引擎接管：这一支改成调用
-    `pci.engine` 并把结果写进真值列，绝不在生成器里另写一套扣分公式。
-    """
+
+def _probe_float(text):
+    # type: (object) -> object
+    """落盘文本 → 评定核要的数值；解析不了就把原样交给引擎（引擎按"不是数值"拒算）。"""
+    if text is None or text == "":
+        return None
     try:
-        pci_engine.surface_table_keys(surface_type)
-    except MilestoneNotImplemented:
-        return PENDING_ENGINE_PREFIX + "pci.engine@M2"
-    return PENDING_ENGINE_PREFIX + "pci.engine.needs_truth_hook"
+        return float(text)
+    except (TypeError, ValueError):
+        return text
+
+
+def _probe_input(base, cell_rows, length_m, panel_count, first_row_index):
+    # type: (Dict[str, object], List[Dict[str, object]], int, Optional[int], int) -> Dict[str, object]
+    """拼出评定核的输入：**取已经落盘的文本值**，真值因此是"引擎对那份 CSV 的算法结果"。
+
+    `source_row_no` 用该行在 raw 表里的数据行序（与 `ledger.importer.read_table` 同一套编号），
+    贡献展开于是能从真值一路指回原始检测表的具体行。
+    """
+    distress_rows = []  # type: List[Dict[str, object]]
+    seen_identities = set()  # type: set
+    for offset, row in enumerate(cell_rows, start=first_row_index + 1):
+        if not row.get("distress_type") and not row.get("quantity"):
+            continue  # 无破损调查记录的行（NO_DISTRESS_VALUES），不参与扣分
+        identity = tuple(str(row.get(name)) for name in importer.DUPLICATE_KEY_COLUMNS)
+        if identity in seen_identities:
+            # 导入层的 R008 会把这份文件里第二次出现的同一行拒在台账外，
+            # 真值必须描述"进了台账的那本账"，否则真值与评定通路的输入就不是同一份数据
+            continue
+        seen_identities.add(identity)
+        distress_rows.append(
+            {
+                "distress_type": row.get("distress_type"),
+                "severity": row.get("severity"),
+                "quantity": _probe_float(row.get("quantity")),
+                "quantity_unit": row.get("quantity_unit"),
+                "lane_no": row.get("lane_no"),
+                "source_row_no": offset,
+            }
+        )
+    return {
+        "segment_id": base["segment_id"],
+        "route_id": base["route_id"],
+        "year": base["year"],
+        "surface_type": base["surface_type"],
+        "length_m": length_m,
+        "lane_count": base["lane_count"],
+        "segment_width_m": _probe_float(base["segment_width_m"]),
+        "panel_count": panel_count,
+        "skid_indicator_kind": base["skid_indicator_kind"],
+        "indicators": {
+            "rqi": _probe_float(base["rqi"]),
+            "rut_depth_mm": _probe_float(base["rut_depth_mm"]),
+            "skid_indicator": _probe_float(base["skid_indicator"]),
+        },
+        "distress_rows": distress_rows,
+        "has_survey": True,
+    }
+
+
+def _numeric_truth_probe(column, surface_type, ruleset, probe_input):
+    # type: (str, str, object, Dict[str, object]) -> str
+    """数值真值通路：必须由评定引擎本身给出（同源），引擎未就位或拒算则如实标 pending。
+
+    系数门已经在上游放行（`_score_truth` 先查 `TRUTH_GOVERNING_KEYS`），到这里还剩两种可能：
+    所属模块仍是占位符（M4/M5 的 mqi、对策列）→ 点名模块与里程碑；
+    评定引擎对该对象拒算（台账含异常行）→ 仍不出数，因为"未核对不出数"对真值同样成立。
+    """
+    from road_mqi_checker import _meta, results as res
+
+    module_key = TRUTH_ENGINE_MODULES[column]
+    short_name = module_key.replace("road_mqi_checker.", "")
+    if module_key in _meta.PLACEHOLDER_MILESTONES:
+        return PENDING_ENGINE_PREFIX + "%s@%s" % (short_name, _meta.PLACEHOLDER_MILESTONES[module_key])
+    if column not in PCI_TRUTH_COLUMNS:
+        return PENDING_ENGINE_PREFIX + "%s.no_truth_hook" % short_name
+    pci_result = pci_engine.compute_pci(probe_input, ruleset)
+    if pci_result.status in (res.STATUS_BLOCKED, res.STATUS_UNCOMPARABLE):
+        return PENDING_ENGINE_PREFIX + "pci.engine.blocked"
+    if column == "pci_truth":
+        return _number(pci_result.pci, pci_engine.PCI_DECIMALS)
+    return pci_result.grade
 
 
 def build_cell(route_id, year, rng, ruleset, enabled=None):
@@ -736,6 +819,7 @@ def build_cell(route_id, year, rng, ruleset, enabled=None):
                 payload = dict(mark["payload"])
                 payload["issue"] = str(mark["issue"])
                 _apply_payload(indicators, distress_rows, payload)
+        first_row_index = len(raw_rows)
         base = {
             "year": year,
             "route_id": route_id,
@@ -783,7 +867,13 @@ def build_cell(route_id, year, rng, ruleset, enabled=None):
             "injected_issue": (str(mark["issue"]) if mark else "none"),
             "injected_field": (str(mark["field"]) if mark else ""),
         }
-        truth.update(_score_truth(surface_type, ruleset))
+        truth.update(
+            _score_truth(
+                surface_type,
+                ruleset,
+                _probe_input(base, raw_rows[first_row_index:], length_m, panel_count, first_row_index),
+            )
+        )
         truth_rows.append(truth)
     return raw_rows, truth_rows, sorted(scenarios), marks
 
@@ -852,9 +942,10 @@ def truth_dir_for(out_dir):
     return os.path.join(parent if parent else ".", "truth")
 
 
-def generate(out_dir, seed=DEFAULT_SEED, routes=DEFAULT_ROUTES, years=DEFAULT_YEARS, force=False, truth_dir=None, scenarios=None):
+def generate(out_dir, seed=DEFAULT_SEED, routes=DEFAULT_ROUTES, years=DEFAULT_YEARS, force=False, truth_dir=None, scenarios=None, ruleset=None):
     """生成 raw 检测表 + truth 真值 + manifest；同 seed 两次运行必须逐字节一致。
 
+    - `ruleset=None` 时按内置/用户目录选取（交付面走的就是这条），测试可显式注入夹具包；
     - 落盘前逐行过 `privacy.check_row`，白名单外一律不落盘（宁可不出文件）；
     - `force=False` 时目标文件已存在即拒绝，避免误改冻结 fixtures；
     - `scenarios` 只用于取损坏模式的子集（默认全量），不改规模口径。
@@ -878,7 +969,7 @@ def generate(out_dir, seed=DEFAULT_SEED, routes=DEFAULT_ROUTES, years=DEFAULT_YE
     out_dir = out_dir.rstrip("/\\") or "."
     truth_out = truth_dir if truth_dir else truth_dir_for(out_dir)
 
-    ruleset = ruleset_loader.select_ruleset()
+    ruleset = ruleset_loader.select_ruleset() if ruleset is None else ruleset
     rng = SplitMix64(seed)
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(truth_out, exist_ok=True)

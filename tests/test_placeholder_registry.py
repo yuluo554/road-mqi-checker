@@ -157,8 +157,18 @@ def test_milestone_docs_are_declared():
 
 
 def test_current_milestone_matches_delivered_work():
-    """M1 数据先行已交付：生成器、导入器、八类校验都真跑，里程碑指针随之前进。"""
-    assert _meta.MILESTONE == "M1"
+    """M2 评定内核已交付：PCI 换算、贡献展开、assess 命令都真跑，里程碑指针随之前进。"""
+    assert _meta.MILESTONE == "M2"
+
+
+def test_pci_kernel_is_no_longer_a_placeholder():
+    """M2 交付的模块必须从登记表移除，且真不再抛占位异常（双向对账的显式那一半）。"""
+    from road_mqi_checker.pci import engine, trace
+
+    for key in ("road_mqi_checker.pci.engine", "road_mqi_checker.pci.trace"):
+        assert key not in _registry(), "%s 仍登记为占位符" % key
+        assert key not in _raised_keys(), "%s 里还有 MilestoneNotImplemented" % key
+    assert callable(engine.compute_pci) and callable(trace.expand_contributions)
 
 
 def test_placeholder_message_is_actionable():
@@ -188,6 +198,9 @@ def test_no_ghost_modules_in_package():
         "ledger.db",
         "ledger.importer",
         "ledger.checks",
+        "pci",
+        "pci.engine",
+        "pci.trace",
         "report",
         "report.disclaimer",
         "gui",

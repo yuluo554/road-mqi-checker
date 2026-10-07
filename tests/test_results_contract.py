@@ -135,6 +135,7 @@ def test_ok_compare_must_name_the_trigger():
         coefficient_key="deduct_ratio.asphalt_distress",
         clause="夹具表 A-1",
         deducted_points=6.0,
+        source_row_no=7,
     )
     result = R.CompareResult(
         segment_id="SYN-01",
