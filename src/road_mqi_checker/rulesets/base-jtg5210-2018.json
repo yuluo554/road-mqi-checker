@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "base-jtg5210-2018",
+  "version": "0.0.0-draft",
+  "title": "JTG 5210-2018 口径基础规则集（骨架期：全部系数待核对）",
+  "applies_to": {
+    "province": "*",
+    "year": "*",
+    "surface_type": "*"
+  },
+  "notes": "M0 骨架状态：本包只声明评定路径需要哪些格子（key），所有 status=pending、values=null。依据官方原文逐格核对后，把 status 改 verified 并补 clause/channel/verified_at/locator，才允许进入计算。任何凭记忆填的数值都是错误，不允许出现在本文件。",
+  "coefficients": [
+    {
+      "key": "deduct_ratio.asphalt_distress",
+      "kind": "deduct_ratio",
+      "surface_type": "asphalt",
+      "status": "pending",
+      "values": null,
+      "unit": "扣分比率（无量纲，按破损类型×程度逐格）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "沥青路面破损扣分比率表，逐格核对原文表号后填入"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "格数与破损类型字典同 plan/03 数据字典"
+    },
+    {
+      "key": "deduct_ratio.cement_distress",
+      "kind": "deduct_ratio",
+      "surface_type": "cement",
+      "status": "pending",
+      "values": null,
+      "unit": "扣分比率（无量纲，按破损类型×程度逐格）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "水泥混凝土路面扣分比率表（含板错误角等按板数计的特殊量纲）"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "pci_component.ride_quality",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "分项得分（RQI 相关换算与权重）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "行驶质量分项在 PCI 合成中的换算关系"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "pci_component.rutting",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "分项得分（车辙深度换算与权重）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "车辙实测值到分项得分的换算式与权重"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "水泥路面是否参与该分项需按原文确认"
+    },
+    {
+      "key": "pci_component.skid_resistance",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "分项得分（抗滑指标换算与权重）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "抗滑指标的可选量纲与换算式"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "pci_weight.asphalt",
+      "kind": "component_weight",
+      "surface_type": "asphalt",
+      "status": "pending",
+      "values": null,
+      "unit": "PCI 合成分项权重",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "沥青路面 PCI 各分项的组合关系与权重"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "与 pci_component.* 条款互为依赖，任一未核对则 PCI 整体 blocked"
+    },
+    {
+      "key": "pci_weight.cement",
+      "kind": "component_weight",
+      "surface_type": "cement",
+      "status": "pending",
+      "values": null,
+      "unit": "PCI 合成分项权重",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "水泥混凝土路面 PCI 各分项的组合关系与权重"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "mqi_weight.pavement",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "MQI 分项权重（路面）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "MQI 加权中路面分项的权重"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "首期只有路面分项可用，汇总必须标注部分口径"
+    },
+    {
+      "key": "mqi_weight.subgrade",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "MQI 分项权重（路基）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "首期不评定，仅参与汇总口径声明"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "mqi_weight.bridge_tunnel",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "MQI 分项权重（桥梁隧道）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "首期不评定，桥隧另有评定标准（明确不做）"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "mqi_weight.appurtenances",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "MQI 分项权重（沿线设施）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "首期不评定"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": ""
+    },
+    {
+      "key": "grade_threshold.pci",
+      "kind": "grade_threshold",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "分级阈值（优/良/中/次/差 五档边界）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "PCI 技术状况分级边界"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "边界开闭区间（含界值与否）必须按原文确认，不得猜"
+    },
+    {
+      "key": "grade_threshold.mqi",
+      "kind": "grade_threshold",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "分级阈值（优/良/中/次/差 五档边界）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "MQI 技术状况分级边界"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "部分口径汇总值不得套用完整 MQI 的分级表述"
+    },
+    {
+      "key": "action_rule.maintenance_trigger",
+      "kind": "action_rule",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "对策规则（指标区间→养护工程类别与规模档）",
+      "basis": [
+        {
+          "standard_id": "JTG 5210-2018",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "按评定结果安排养护工程的要求；上位养护规范编号与名称对应关系未确认（见 data/README.md#4 查证失败记录），在确认前不得引用该规范号"
+        }
+      ],
+      "register_ref": "data/README.md#1",
+      "note": "规则链 IF/THEN 结构在 M4 落地，触发条件与阈值在此登记；上位养护规范的编号-名称对应关系查证失败（台账第 4 行），确认前不得引用该规范号"
+    },
+    {
+      "key": "tolerance.length_closure",
+      "kind": "grade_threshold",
+      "surface_type": null,
+      "status": "pending",
+      "values": null,
+      "unit": "路段长度与路线里程闭合差容差",
+      "basis": [
+        {
+          "standard_id": "user-defined",
+          "status": "pending",
+          "clause": "",
+          "channel": "",
+          "verified_at": "",
+          "locator": "",
+          "note": "非标准条款系数：属用户自定口径，必须在导入回执里显示当前取值与来源"
+        }
+      ],
+      "register_ref": "data/README.md#7",
+      "note": "用户自定也要显式登记，不允许代码里硬编码默认容差"
+    }
+  ]
+}

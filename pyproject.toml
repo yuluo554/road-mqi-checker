@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "road-mqi-checker"
+version = "0.0.0"
+description = "公路技术状况评定与养护决策支持工具（全离线、规则优先、可复算）"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "road-mqi-checker contributors" }]
+keywords = ["公路养护", "MQI", "PCI", "技术状况评定", "JTG 5210"]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering",
+]
+# 核心内核零第三方依赖：CSV 走 csv 模块、台账走 sqlite3、校验走标准库。
+# 任何新依赖必须先过 plan/02 §1 的选型门槛（可冻结打包 + py3.8 可用 + 离线）。
+dependencies = []
+
+[project.optional-dependencies]
+# GUI 与打包属交付层，绝不做核心依赖（基准评测必须零依赖可跑）。
+# 上限按解释器分档：3.8 上 PySide6 6.7+ 元数据 requires-python>=3.9 会被 pip 回避，
+# 而只写下限会让干净环境解析到更新的破坏版本（见 plan/02 §11）。
+gui = [
+  "PySide6>=6.6.3.1,<6.7; python_version < '3.9'",
+  "PySide6>=6.5; python_version >= '3.9'",
+]
+pkg = [
+  "pyinstaller>=5.13,<6; python_version < '3.9'",
+  "pyinstaller>=6.0; python_version >= '3.9'",
+]
+dev = [
+  "pytest>=7.0,<9; python_version < '3.9'",
+  "pytest>=7.0; python_version >= '3.9'",
+  "pyyaml>=5.4",
+]
+
+[project.scripts]
+rmqc = "road_mqi_checker.cli:main"
+road-mqi-checker = "road_mqi_checker.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "gui: 需要 PySide6 的桌面壳测试（缺依赖时模块级声明式跳过）",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+road_mqi_checker = ["rulesets/*.json"]

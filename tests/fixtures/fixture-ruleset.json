@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "fixture-only",
+  "version": "0.0.0-fixture",
+  "title": "夹具规则集：只允许出现在 tests/fixtures，用来跑数值通路",
+  "applies_to": {
+    "province": "fixture",
+    "year": "fixture",
+    "surface_type": "asphalt"
+  },
+  "notes": "刻意避开任何真实标准数值：这里的 0.42 / 0.58 / 92.5 是夹具数，不是规范事实。",
+  "coefficients": [
+    {
+      "key": "deduct_ratio.asphalt_distress",
+      "kind": "deduct_ratio",
+      "surface_type": "asphalt",
+      "status": "fixture",
+      "values": {"light": 0.42, "heavy": 0.58},
+      "unit": "扣分比率",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具表 A-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/fixture-ruleset.json",
+          "note": "夹具值，禁止进入评定路径以外的任何数据文件"
+        }
+      ],
+      "register_ref": "tests/fixtures",
+      "note": ""
+    }
+  ]
+}

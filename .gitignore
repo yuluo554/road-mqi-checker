@@ -39,6 +39,13 @@ reports/out/
 tmp/
 scratch/
 .cache/
+# 会话内验证/查证临时产物：只落这里，扫描器与字节门一律跳过（见 plan/02 §11）
+.tmp_*/
+*.orig
+
+# 本地数据与用户自定规则集覆盖（运行期台账文件由上面的 *.sqlite / *.db 覆盖；
+# 注意不要写 ledger/ —— 它会吞掉 src/road_mqi_checker/ledger/ 这个包目录）
+data/local/
 
 # 编辑器等
 .idea/

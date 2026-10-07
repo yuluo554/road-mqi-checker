@@ -54,8 +54,12 @@ injected_issue, injected_field
 
 - `surface_type ∈ {asphalt, cement}`；
 - `injected_issue ∈ {gap_chain, overlap_chain, partition_change, negative_value, out_of_range, unit_error, duplicate_import, none}`；
-- 真值由生成器按**自算公式**（非人工填写）输出，公式与 04 文档一致，保证"数据错→检出"和"分数算得对"两类真值同源可复算；
-- 生成器必须支持固定随机种子（基准可复现的前提）。
+- 真值由生成器按**自算公式**（非人工填写）输出，公式与 `plan/05-评定与汇总算法说明.md` 一致，保证"数据错→检出"和"分数算得对"两类真值同源可复算；
+- 生成器必须支持固定随机种子（基准可复现的前提），随机源只能是 `src/road_mqi_checker/bench/rng.py` 的 splitmix64。
+
+> 本文件 §一 的表格行号 `#N` 是系数的**出处指针**：内置规则集每格系数的 `register_ref` 写成
+> `data/README.md#N`，由 `tests/test_ruleset_builtin.py` 校验该行存在且内容确实提到所引用的标准。
+> 增删本表行要同步规则集 JSON 与该测试。
 
 ## 四、目录约定
 
@@ -67,4 +71,21 @@ data/
   standards/      自己整理的条款摘录笔记（禁止提交标准全文/扫描件）
 ```
 
-`data/standards/*.pdf` 已在 `.gitignore` 中排除，避免版权风险。
+规则集系数不在 `data/` 下，而在包内随发布走：`src/road_mqi_checker/rulesets/*.json`
+（用户自定/地方细则包放仓库外，用环境变量 `RMQC_RULESET_DIR` 指定目录覆盖）。
+理由：exe 内嵌数据要能与仓库逐份对账（M6 构建红线），数据文件与规则系数分两处会漏检。
+
+`data/standards/*.pdf` 已在 `.gitignore` 中排除，避免版权风险；`data/raw/real_*` 亦排除，
+真实检测数据不得进仓库。会话内查证与验证的临时产物只落 `.tmp_*/`（已被忽略且字节门跳过）。
+
+## 五、M0 骨架落地对照（2026-10-07）
+
+| 本文件的约定 | 代码落点 | 由哪条测试守住 |
+|---|---|---|
+| 三态核对状态 | `ruleset/status.py`（`pending/located/verified` + 夹具档 `fixture`） | `tests/test_ruleset_status.py` |
+| 每格系数登记来源 | `rulesets/base-jtg5210-2018.json` 的 `basis` + `register_ref` | `tests/test_ruleset_builtin.py` |
+| 真值文件列约定 | `bench/generator.py` 的 `TRUTH_COLUMNS`（单点定义） | 待 M1 的"生成器位级一致 + 真值对账"测试 |
+| `injected_issue` 词汇 | `ledger/models.py` 的 `INJECTED_ISSUES` | `tests/test_ledger_structure.py` |
+| 白名单形式 | `privacy.py` 的 `PATTERNS` + `WHITELIST_HINTS` | `tests/test_privacy_whitelist.py` |
+| 固定随机种子 | `bench/rng.py` splitmix64 + 冻结向量 | `tests/test_determinism_rng.py` |
+| 未核对不进评定路径 | `results.py` 拒算契约 + `cli` 系数门 | `tests/test_results_contract.py`、`tests/test_cli_contract.py` |

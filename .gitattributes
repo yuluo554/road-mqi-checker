@@ -1,0 +1,21 @@
+# 全仓库统一 LF：Windows 开发机 core.autocrlf=true 会把检出写成 CRLF，
+# 而位级冻结 fixtures 与字节一致断言依赖 LF（见 plan/02 §5、§11）。
+* text=auto eol=lf
+
+# 二进制与产物类不参与 EOL 转换
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.dll binary
+*.pyd binary
+*.zip binary
+*.gz binary
+*.db binary
+*.sqlite binary
+
+# 导出的 Office 文档是 zip 容器，必须按二进制对待
+*.docx binary
+*.xlsx binary
+*.pptx binary
