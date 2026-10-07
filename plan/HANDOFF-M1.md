@@ -7,7 +7,7 @@
 
 | 项 | 实测值 | 复核命令 |
 |---|---|---|
-| 提交 | 四个本地 commit（骨架 / git 索引对账门 / 收尾台账 / 开放项补充），工作树干净，**无 remote、未 push** | `git log --oneline -5` / `git status --porcelain` |
+| 提交 | 本地 main 上一串 M0 提交（骨架 → git 索引对账门 → 收尾台账 → 开放项 → 台账对齐），工作树干净，**无 remote、未 push**；确切条数与哈希看 `git log --oneline` | `git log --oneline` / `git status --porcelain` |
 | 测试 | 159 项，py3.8.8 与 py3.12.10 各 159 collected / 159 passed / 0 skip / 0 warning | `py -3.8 -X utf8 -m pytest tests` |
 | 全新 clone | 在 `.tmp_verify/` 临时目录 `git clone` 本仓库后双解释器 159 全绿 + `selfcheck` 返回 0；`core.autocrlf=true` 环境下 CR 门通过（LF 声明生效）。验证目录用完已删 | `git clone . <临时目录>` 后照 README 跑 |
 | 系数门 | 生效 0 格 / 拒算 15 格，`selfcheck` 如实报"系数门关" | `rmqc selfcheck` |
