@@ -6,14 +6,14 @@
 
 | 编号 | 文档 | 内容 | 状态 |
 |---|---|---|---|
-| 00 | 本文件 | 索引、决策记录、里程碑 | ✅ M5 回写 |
+| 00 | 本文件 | 索引、决策记录、里程碑 | 🟡 M6 回写中（M0–M5 部分已定稿） |
 | 01 | `01-题目与任务要求.md` | 题目定稿（介绍/任务/材料/评分/锚点/边界） | ✅ 已定稿 v1 |
 | 02 | `02-开发计划与架构.md` | 技术选型、分层架构、模块映射、三态与拒算口径、CLI 与退出码、守门测试清单、M0–M6 DoD、既定口径、开放项 | ✅ 已定稿 v1（M0） |
 | 03 | `03-数据字典与合成数据.md` | 路线/路段/年度检测表结构、破损类型字典、真值语义与 manifest 格式、实测召回/误报 | ✅ 已定稿 v1（M1） |
 | 04 | `04-扣分规则集与条款映射.md` | versioned ruleset 逐格条款登记与地方差异 | ✅ 已写（M3，结论：官方原文不可得，14 格留 pending） |
 | 05 | `05-评定与汇总算法说明.md` | PCI 换算、MQI 加权、分级判定、确定同分排序 | ✅ M2 交付 PCI 部分；✅ M4 交付汇总 / 分级 / 对策 / 年对比（§八–§十一 含出口实测） |
 | 06 | `06-基准与评测.md` | 黄金用例、指标定义、复现命令 | ✅ 已定稿（M5 实测） |
-| 07 | `07-交付与打包.md` | GUI 结构、PyInstaller onedir、构建红线断言 | ⬜ 待写（M6） |
+| 07 | `07-交付与打包.md` | GUI 结构、PyInstaller onedir、构建红线断言 | 🟡 M6 撰写中（导出与桌面壳的实测口径已落在 `plan/02` §三/§六/§七/§八/§九，待本文收口） |
 | — | `data/README.md` | 依据查证记录 + 合成数据纪律与白名单 | ✅ M4 更新（真值两列接线与逐列出数判据） |
 | — | `HANDOFF-M1.md` | 上一棒交接快照（M1 数据先行） | ✅ 已交付 |
 | — | `HANDOFF-M2.md` | 上一棒交接快照（M2 评定内核） | ✅ 已交付 |
@@ -83,10 +83,10 @@
 | M2 评定内核 | 沥青与水泥两套扣分换算 + PCI 分项合成 + 零漂移复算 | 同数据重跑误差 0；扣分贡献可展开到破损项；真实规则集下仍拒算 | ✅ 完成（2026-10-07，复算误差 0/42 对象、排序一致性 1.00/214 次重排） |
 | M3 规则与条款 | 逐格核对原文入库 + 条款映射文档 + 地方差异包 | 每个生效系数有四件套渠道档；核对不过的留 pending 并记已查渠道；`plan/04` 完成 | ✅ 已交付（2026-10-07）：**官方原文不可得** ⇒ 14 格留 pending 并逐渠道留档，`plan/04` 完成，唯一生效格是用户自定容差；省份包不编造 |
 | M4 汇总与年对比 | 三级加权、分级判定、对策规则链、劣化速率与优先序 | "分项不全不冒充完整 MQI"由测试锁定；同分排序稳定；不可比不出变化率 | ✅ 已交付（2026-10-07）：三级同分母可互相复算；partial 不给等级；`uncomparable` 出原因代码且不出变化率；数值通路在夹具包实测（partial 36 / blocked 6 / ok 0），内置包三条路径全拒算 |
-| M5 基准 | 黄金用例 + 四类指标（实到 8 条 × 两通路 = 16 行）+ 一键复现评测 | `plan/06` 有实测数字（指标定义 / 黄金用例 / 复现命令）；README 指标表由 `bench run --json` 生成并逐行对账；干净环境可复现（新 clone + 新 venv 里 `bench generate` + `bench run`） | ✅ 已交付（2026-10-07）：`rmqc bench run` 真跑，今天状态分布 达标 10 / 未达标 0 / 不可判 6 / 不可用 0、整体退出码 0；6 项不可判全部登记在 `evaluation.DECLARED_INDETERMINATE`（门禁对名单内豁免）；`report` / `gui` 仍返回 3 |
-| M6 交付与脱敏发布 | PySide6 GUI + 报告导出 + onedir 双 exe + 构建红线断言 + 脱敏 + push | 双击 exe 完成"导入年度检测表→导出优先序清单"；全历史无真实信息与标准全文；CI 四矩阵首跑全绿 | ⬜ |
+| M5 基准 | 黄金用例 + 四类指标（实到 8 条 × 两通路 = 16 行）+ 一键复现评测 | `plan/06` 有实测数字（指标定义 / 黄金用例 / 复现命令）；README 指标表由 `bench run --json` 生成并逐行对账；干净环境可复现（新 clone + 新 venv 里 `bench generate` + `bench run`） | ✅ 已交付（2026-10-07）：`rmqc bench run` 真跑，今天状态分布 达标 10 / 未达标 0 / 不可判 6 / 不可用 0、整体退出码 0；6 项不可判全部登记在 `evaluation.DECLARED_INDETERMINATE`（门禁对名单内豁免）；M5 出口时 `report` / `gui` 仍是占位符命令，M6 已转真（见下行） |
+| M6 交付与脱敏发布 | PySide6 GUI + 报告导出 + onedir 双 exe + 构建红线断言 + 脱敏 + push | 双击 exe 完成"导入年度检测表→导出优先序清单"；全历史无真实信息与标准全文；CI 四矩阵首跑全绿 | 🟡 进行中（导出与 GUI 已转真，打包/脱敏/发布未做）：`rmqc report` 三格式真跑、`rmqc gui --probe` 七页签转发内核；487 项守门测试在 py3.8.8 与 py3.12.10 双通道各收集 487、各 487 通过、0 跳过；占位符登记表 2 → 0（终态）。**交付面仍不出数**：导出表里数值列/等级列一律留空并写明拒算原因，基准评测在内置包通路上仍报"不可判（分母为 0）" |
 
-## 快速开始（当前状态 = M5 基准与评测）
+## 快速开始（当前状态 = M6 交付层进行中：导出与桌面壳已转真）
 
 ```bash
 py -m venv .venv
@@ -101,12 +101,24 @@ rmqc bench generate # 重生成演示数据：内容一致则逐字节不动
 rmqc bench run      # 基准评测：8 指标 × 两通路 = 16 行，退出码取 `evaluation.gate()`（今天 0）
 rmqc --db ledger.sqlite import --file data/raw/S99-2022.csv --year 2022  # 入库 + 回执 + 八类校验
 rmqc --db ledger.sqlite assess --year 2022   # 逐路段 PCI 评定与扣分展开（系数未核对 → 全部 blocked，退出码 1）
-python -m pytest    # 守门测试
+rmqc --db ledger.sqlite report --year 2022 --format md --out report.md   # 导出评定报告（内置包下数值列留空，退出码 1）
+rmqc --db ledger.sqlite report --year 2022 --scope plan --out plan.csv   # 优先序清单（不给 --from-year 时 delta 两列留空）
+rmqc gui --probe                             # 桌面壳存活探针：建七页签、逐页转发内核后退出（需 [gui] extras）
+python -m pytest    # 守门测试（py3.8 与 py3.12 双通道各 487 项）
 ```
 
-`report / gui` 当前返回退出码 3 并指明所属里程碑（M6）；`bench run` 自 M5 起真跑（退出码按指标四态取门禁结果：
+`report` 自 M6 起真跑：`--year` 与 `--out` 必填，`--format csv|md|docx` 默认 csv 且 `--out` 后缀要与格式一致，
+`--scope assessment|plan` 默认 assessment，`--level segment|route|network` 默认 route（作用于汇总表），
+`--from-year` 可选（给了才从年对比结果转述 delta 与劣化速率两列，不给就留空）；
+导出成功但存在 blocked/partial/uncomparable 对象 → 1，该年度台账无路段行 / 导出目录不存在 / 后缀与格式不符 → 2。
+`gui` 自 M6 起真跑：装了 `[gui]` extras 时 `gui --probe` 落 0，缺 PySide6 落 1 并给 extras 安装提示。
+命令面上已没有任何命令走占位符通路（3 号那一档只由 `MilestoneNotImplemented` 产生，机制保留给未来骨架，
+`_meta.PLACEHOLDER_MILESTONES` 现为空 dict、`_meta.MILESTONE` = `M6`）；
+`bench run` 自 M5 起真跑（退出码按指标四态取门禁结果：
 未达标 1 > 不可用 3 > 名单外新不可判 2 > 其余 0，今天整体 0）；
 `aggregate` 与 `compare` 自 M4 起真跑（存在 blocked/partial/uncomparable 项落 1，无路段行落 2）。
+**导出与桌面壳转真没有改变"交付面不出数"这件事**：导出的表里数值列 / 等级列一律留空并逐格写明拒算原因，
+基准评测在内置包通路上仍如实报"不可判（分母为 0）"。
 
 **继续开发**：新对话用 `plan/HANDOFF-M6.md`（M6 交付与打包，落盘后即为续接入口）续接，或直接点名从 M6 起。
 

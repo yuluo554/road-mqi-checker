@@ -6,14 +6,17 @@
 评分变化能追到具体破损项。聊天框答不出"这段 4.2 公里今年比去年低 6 分是哪几处坑槽扣掉的、
 按规则该排小修还是中修"——因为它没有路段台账，也没有可复算的扣分表。
 
-> **状态：M2 评定内核（✅）／M3 规则与条款（✅，查证结论为"官方原文不可得"）／M4 汇总、对策与年对比（✅）／M5 基准与评测（✅）** ——
+> **状态：M2 评定内核（✅）／M3 规则与条款（✅，查证结论为"官方原文不可得"）／M4 汇总、对策与年对比（✅）／M5 基准与评测（✅）／M6 交付层（🟡 报告导出与桌面壳已转真并实测；打包、一键验证、脱敏发布、CI、tag 未做）** ——
 > 台账导入、导入回执、八类确定性校验、合成数据基准、**路面 PCI 评定与扣分贡献展开**、
 > **三级 MQI 汇总与分级判定、对策规则链与优先序、年对比与变化贡献项**、
-> **两通路四态基准评测（`rmqc bench run`）**均已实跑；
+> **两通路四态基准评测（`rmqc bench run`）**、**报告导出（`rmqc report`：csv / md / docx 三格式）**与
+> **桌面壳（`rmqc gui`：七页签只转发同一个 CLI 内核，`--probe` 为存活探针）**均已实跑；
 > 演示数据（3 条虚拟路线 × 4 个年度）作为冻结 fixtures 入仓，同 seed 重跑逐字节一致。
-> 报告导出与桌面壳按计划属 M6。规范来源系数全部为"待核对"，
+> 规范来源 14 格系数仍未解锁，
 > 交付面**评定 / 汇总 / 对策三条路径都不出数**（这是设计，不是缺陷，见下）——
-> 真值文件的评分四列同样只出 `pending` 令牌，因此基准评测在内置包通路上**如实报不可判**。
+> 真值文件的评分四列同样只出 `pending` 令牌，因此基准评测在内置包通路上**如实报不可判**；
+> 因此导出的报告与清单里，数值列与等级列一律留空并逐格写明拒算原因：
+> **"这张表能导成 docx"不等于"可交付的评定结果"**，导出层做的只是把引擎的账原样落到文件上。
 
 ## 为什么现在算不出分
 
@@ -74,9 +77,21 @@ M3 轮换了官方渠道逐条复核，仍然取不到能定位条款号与表�
   同 seed 两次运行逐字节一致（含 EOL），演示数据作为冻结 fixtures 入仓；
 - **数据类别闸门**：演示文件带 `data_class=SYNTHETIC` 标记并强制白名单，真实台账用 `--data-class user` 显式声明；
 - **跨年度划分不可比要显式标记**，不静默按比例摊分；
+- **报告导出**（M6）：`--scope assessment` 出台账概况 + 路段 PCI 评定表 + MQI 汇总与分级表，
+  `--scope plan` 出 `PLAN_COLUMNS` 16 列的优先序清单，两者都以固定免责声明收尾（声明必在末尾）；
+  字段一律转述各引擎已有的 `result_payload()`，导出层不重算、不重排、不二次舍入，
+  blocked/uncomparable 行原样留在表里、数值列留空（不是 0、不是 `None` 字样）；
+  docx 由标准库直写 OOXML（三个部件、zip 条目时间固定 1980-01-01 00:00:00），
+  所以三种格式两次导出都逐字节一致；
+- **导出层自带闸门**（M6）：`exporters.assert_export_safe` 在导出通路上再拦一次——过强措辞、
+  夹具（fixture）字样、绝对路径 / 本机用户名 / 时间戳形态一律拒入，不假定上游命令面已经干净；
+- **桌面壳只转发**（M6）：七页签每页的"运行内核"调的都是 `cli.main(argv)`，退出码与输出文本
+  与命令行逐字一致；页签→命令映射由 `PAGE_TITLES` / `PAGE_COMMANDS` / `PAGE_SPECS` 声明，
+  测试断言"每个页面要发的 flag 都必须存在于 CLI parser 里"（GUI 不发明参数）；
+  `rmqc gui --probe` 可在无显示环境跑存活探针；
 - **全离线**：不联网、不调用任何大模型；CI 与测试用断网探针验证这一点；
 - **数据红线**：演示数据全部程序合成，路线编号/行政代码/手机号/DOI 走白名单校验，真实形态一律拒绝入库；
-- **同一内核三种入口**：CLI（`rmqc`）/ `python -m road_mqi_checker` / 桌面壳（M6）。
+- **同一内核三种入口**：CLI（`rmqc`）/ `python -m road_mqi_checker` / 桌面壳（`rmqc gui`，M6 已转真）。
 
 ## 架构
 
@@ -124,6 +139,9 @@ rmqc --db ledger.sqlite aggregate --year 2022 --level route    # 三级 MQI 汇�
 rmqc --db ledger.sqlite compare --from-year 2022 --to-year 2023  # 年对比与变化贡献项（不可比不出变化率）
 rmqc bench run                                  # 基准评测：两通路 × 8 指标，逐行报分子/分母/状态
 rmqc --json bench run                            # 同一份数据的结构化输出（下方评测表由它生成）
+rmqc --db ledger.sqlite report --year 2022 --format md --out report.md   # 导出评定报告（内置包下数值列留空，落 1）
+rmqc --db ledger.sqlite report --year 2022 --scope plan --out plan.csv   # 优先序清单（不给 --from-year 时 delta 两列留空）
+rmqc gui --probe                                 # 桌面壳存活探针：建七页签、逐页转发内核后退出（需 [gui] extras）
 python -m pytest                  # 守门测试
 ```
 
@@ -139,7 +157,15 @@ python -m pytest                  # 守门测试
 | 2 | 输入不可用（未进入评定路径） |
 | 3 | 尚未实现（属未来里程碑） |
 
-`report / gui` 当前返回 3 并指明所属里程碑（M6）；
+`report` 自 M6 起真跑：`--year` 与 `--out` 必填，`--format csv|md|docx` 默认 csv 且 `--out` 的后缀
+要与格式一致（不一致即拒），`--scope assessment|plan` 默认 assessment，`--level segment|route|network`
+默认 route（作用于汇总表），`--from-year` 可选——给了才从年对比结果转述 `delta` 与
+`deterioration_rate_per_year` 两列，不给就留空，不做推测性摊分。导出成功但存在 blocked/partial/uncomparable
+对象时落 1（内置系数包下就是这样）；该年度台账无路段行、导出目录不存在、后缀与格式不符都落 2；
+它已经不走 3 号那一档。`gui` 自 M6 起真跑：装了 `[gui]` extras 时 `gui --probe` 落 0，
+缺 PySide6 落 1 并给 `pip install road-mqi-checker[gui]` 提示。
+命令面上已没有任何命令走占位符通路（`MilestoneNotImplemented` → 3 号的映射机制保留给未来骨架，
+占位符登记表 `_meta.PLACEHOLDER_MILESTONES` 现为空、`_meta.MILESTONE` = `M6`）；
 `import`、`bench generate` 自 M1 起真跑（`import` 有拒入行时落 1），`assess` 自 M2 起真跑，
 `aggregate`、`compare` 自 M4 起真跑（存在 blocked/partial/uncomparable 项时落 1；
 对应年度台账没有路段行时落 2），`bench run` 自 M5 起真跑，退出码按指标四态映射：
@@ -171,11 +197,15 @@ M3 新增的纪律类证据：`rmqc selfcheck` 显示"生效系数 1 格 → 系
 闭合差则从"待核对，未判定"变成真的判：4 个非零闭合差（−200 / +100 m）全部转为检出 `R004_CLOSURE_EXCEEDED`，
 另有测试把容差格退回 pending 的临时包，证明"未判定"是系数门挡的而不是没实现。
 M1 能实测的还包括：`rmqc selfcheck` 的台账 schema 与 GUI 页签自检；
-410 项守门测试断言三态、拒算、离线、隐私、CI、EOL、位级一致、换算黄金用例、系数逐格二选一、
+487 项守门测试断言三态、拒算、离线、隐私、CI、EOL、位级一致、换算黄金用例、系数逐格二选一、
 生效格 values 形状契约、官方渠道判据、三级同分母、部分口径不给等级、不可比拒出变化率、
 两通路四态与门禁只红于三类、README 评测表与命令输出逐行对账、
+导出层的三类污染拒入与三格式逐字节一致、GUI 页签参数必须能在 CLI parser 里找到、
 闸门自身环境稳健性等口径不被破坏
-（Python 3.8.8 与 3.12.10 双通道实测：各收集 410 项、各 410 通过、0 跳过、0 警告）。
+（Python 3.8.8 与 3.12.10 双通道实测：各收集 487 项、各 487 通过、0 跳过、0 警告。
+M6 这一轮的净增 77 项构成：新增 `tests/test_m6_report.py` 51 项 + 新增 `tests/test_m6_gui.py` 23 项 +
+`tests/test_cli_contract.py` 的占位符命令门由 3 条换成 4 条并新增冻结态落点门（净 +2）+
+`tests/test_placeholder_registry.py` 的 M6 转真门（+1））。
 本表由 `rmqc bench run --json` 生成（`bench-run:begin/end` 标记之间），
 `test_readme_metric_table_is_generated_from_bench_run` 逐行对账，手改表格会打挂测试。
 
@@ -196,6 +226,26 @@ M5 新增的纪律类证据（`rmqc bench run` 的命令输出，不是手抄）
 判定通路已交付、夹具包下 36 个对象出等级，但等级由同一内核算出，没有独立的规范真值可比，
 分母为 0 —— 这一项写在 `DECLARED_INDETERMINATE` 里，门禁对它不红，也不许改成"达标 1.00"。
 M4 的 `.tmp_verify/M4/measure.log` 里那些手写实测数，现在由命令自己报出来。
+
+M6 新增的纪律类证据（导出与桌面壳，都是实跑命令 `rmqc report` / `rmqc gui --probe` 的形态）：
+导出物一律经 `disclaimer.compose_document` 拼装，所以"固定免责声明两行必在末尾"是结构事实而不是文案；
+内置系数包下 `report` 落 1 —— 表里 blocked/uncomparable 行原样保留、数值列与等级列留空
+（不是 0、不是 `None` 字样）、拒算原因随行给出；`--scope plan` 未给 `--from-year` 时
+`delta` 与 `deterioration_rate_per_year` 两列同样留空，不摊分；
+三类污染在导出层逐个拒入（过强措辞四词"已确认/已核实/最终确定/必定"按每种格式各测一遍、
+夹具 `fixture` 字样、绝对路径 / 本机用户名 / 时间戳形态）；
+三种格式两次导出逐字节一致（docx 走标准库直写 OOXML，三个部件、zip 条目时间固定 1980-01-01 00:00:00）；
+字段全部转述 `pci.engine` / `mqi.engine` / `strategy.rules` / `strategy.compare` 的 `result_payload()`，
+导出层不重算、不重排、不二次舍入（`84.05` 不会被排成 `84.1`）。
+桌面壳七页签（台账与导入 / 路面 PCI 评定 / MQI 汇总与等级 / 年对比与优先序 / 基准评测 /
+依据登记与规则集 / 导出与声明）**只转发**：每页"运行内核"走 `cli.main(argv)`，
+退出码与输出文本与命令行逐字一致（内置包下 blocked 的 `assess` 在页面上显示 1，不改判成成功）；
+页面要发的每个 flag 都有门断言"存在于 CLI parser 里"，GUI 不许发明参数；
+`gui --probe` 是双向断言——装了 PySide6 返回 0（建主窗口、数七页签、跑一次 `version` 转发、
+再逐页触发内核，不进事件循环），缺 PySide6 返回 1 并给 `pip install road-mqi-checker[gui]` 提示。
+这一轮**没有**改变交付面不出数这件事：导出的是一张数值列留空、逐格写明拒算原因的表，
+不是可交付的评定结果；基准评测在内置包通路上仍如实报"不可判（分母为 0）"；
+打包（PyInstaller onedir 双 exe）、中立目录一键验证、脱敏发布、CI 首跑与 tag 都还没做。
 
 ## 目录
 

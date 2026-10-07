@@ -151,9 +151,13 @@ def test_registry_modules_appear_in_dev_plan(plan02):
 
 
 def test_milestone_docs_are_declared():
-    for milestone in sorted(set(_registry().values()) | {"M0"}):
+    for milestone in sorted(set(_registry().values()) | {_meta.MILESTONE} | {"M0"}):
         assert milestone in _meta.MILESTONE_DOCS, milestone
-        assert os.path.isabs(_meta.MILESTONE_DOCS[milestone]) is False, "文档路径要写成仓库相对路径"
+        doc = _meta.MILESTONE_DOCS[milestone]
+        assert os.path.isabs(doc) is False, "文档路径要写成仓库相对路径"
+        # 当前里程碑的出口判据主文档必须真的存在：M6 的 plan/07 就是这么被锁住的
+        root = os.path.dirname(os.path.dirname(os.path.abspath(_meta.__file__)))
+        assert os.path.isfile(os.path.join(os.path.dirname(root), doc)), "%s → %s 不存在" % (milestone, doc)
 
 
 def test_current_milestone_matches_delivered_work():
