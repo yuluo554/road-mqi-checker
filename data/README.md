@@ -69,9 +69,13 @@ injected_issue, injected_field
   （`pci.engine.compute_pci`，与 `rmqc assess` 同一个内核），生成器里没有第二套扣分公式。
   于是同一 seed 重跑：换上一套系数已核对的规则集包，`pci_truth` / `grade_truth` 两列自动变数值或等级名，
   且与台账通路逐字段相同（`tests/test_m2_assess.py` 逐个对象对账）。
-  剩下两列 `mqi_partial_truth` / `recommended_action_truth` 属 M4，仍写 `pending:engine=mqi.engine@M4` /
-  `pending:engine=strategy.rules@M4`（如实点名所属模块与里程碑，不放一个凑出来的数）。
-  系数齐了但评定引擎对该对象拒算（台账含异常行）时，这两列写 `pending:engine=pci.engine.blocked` ——
+  剩下两列 `mqi_partial_truth` / `recommended_action_truth` **M4 起也接到引擎本身**
+  （`mqi.engine.aggregate_segment_mqi` / `strategy.rules.suggest_actions`，与 `rmqc aggregate` 同一内核）；
+  内置包下这两列仍是 `pending:coeff=` 令牌，点名的是**汇总/对策路径各自的必需格**
+  （汇总列 = `mqi_weight.pavement` + `grade_threshold.mqi`，对策列 = `action_rule.maintenance_trigger`），
+  不再是"模块未就位"的 `pending:engine=…@M4` —— 里程碑占位符档已随 M4 交付消失，
+  但"必需格未齐 ⇒ 不出数"这条判据照样有门（`plan/02` §9 第 28 条）。
+  系数齐了但评定引擎对该对象拒算（台账含异常行）时，这些列写 `pending:engine=pci.engine.blocked` ——
   **引擎拒算的对象真值也不出数**，两边口径一致；
 - 真值取的是**即将落盘的那份 CSV 的文本值**，并按导入层 `R008` 的同一身份列去掉文件内重复行：
   真值描述"进了台账的那本账"，与评定通路的输入是同一份数据（`plan/02` §9 第 21 条）；
@@ -121,7 +125,8 @@ data/
 | 真值评分四列不出数（内置包） | `generator._score_truth` + `_numeric_truth_probe` | `test_truth_score_columns_refuse_to_emit_numbers`、`test_cement_truth_stays_pending_under_the_asphalt_fixture` |
 | 数值真值由评定引擎产生（M2 接线） | `generator._numeric_truth_probe` → `pci.engine.compute_pci` | `test_truth_probe_delegates_to_the_assessment_engine`（spy 证明被调用）、`test_truth_columns_are_numeric_and_match_the_ledger_path`、`test_cement_fixture_produces_cement_truth` |
 | 含异常对象拒算而非跳过破损行 | `pci.engine.BLOCKING_CHECK_KINDS` + `blocking_findings` | `test_every_abnormal_object_in_the_frozen_data_is_refused` |
-| M4 两列仍点名未就位模块 | `generator.TRUTH_ENGINE_MODULES` | `test_mqi_and_action_truth_columns_stay_pending_until_m4` |
+| M4 两列接线：夹具下出数、必需格未齐时仍令牌 | `generator._numeric_truth_probe` → `mqi.engine` / `strategy.rules`；`generator.truth_gate_notes()` | `test_mqi_and_action_truth_columns_emit_numbers_under_the_m4_fixture`、`test_mqi_and_action_truth_columns_still_token_when_required_cells_missing` |
+| 逐真值列的出数判据（必需格） | `generator.gate_pending_keys` + `manifest.coefficient_gate.truth_gates` | `test_selfcheck_reports_path_gates_by_required_cells`、`test_raw_and_truth_columns_match_manifest` |
 | `injected_issue` 词汇 | `ledger/models.py` 的 `INJECTED_ISSUES` | `test_each_injected_issue_has_at_least_two_cases` |
 | 白名单形式 | `privacy.py` 的 `PATTERNS` + `WHITELIST_HINTS` | `tests/test_privacy_whitelist.py`、`test_committed_data_identifiers_all_pass_the_whitelist` |
 | 数据类别（SYNTHETIC / user） | `ledger/importer.py` 的 `DATA_CLASSES` + 文件首行标记 | `test_unmarked_file_refuses_without_declaration`、`test_mark_conflicting_with_declaration_is_refused` |

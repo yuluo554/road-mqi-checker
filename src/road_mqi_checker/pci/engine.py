@@ -116,32 +116,32 @@ def surface_table_keys(surface_type):
     )
 
 
-class _Refuse(Exception):
-    """内部用：一条拒算原因（缺系数 / 数据不可解释），统一转成 blocked 结果。"""
+class Refusal(Exception):
+    """一条拒算原因（缺系数 / 数据不可解释），各引擎共用，统一转成 blocked 结果。"""
 
     def __init__(self, reason):
         # type: (str) -> None
         self.reason = reason
-        super(_Refuse, self).__init__(reason)
+        super(Refusal, self).__init__(reason)
 
 
 # ---- 系数门 ----
 
 
-def _coefficient(ruleset, key):
+def coefficient(ruleset, key):
     # type: (object, str) -> object
     coef = ruleset.find(key)
     if coef is None:
-        raise _Refuse("规则集 %s 未登记系数 %s，应核实原文后补入" % (ruleset.ruleset_id, key))
+        raise Refusal("规则集 %s 未登记系数 %s，应核实原文后补入" % (ruleset.ruleset_id, key))
     if not coef.computable:
-        raise _Refuse(coef.block_reason())
-    clause = _clause(coef)
+        raise Refusal(coef.block_reason())
+    clause = clause_of(coef)
     if not clause:
-        raise _Refuse("系数 %s 可算但未登记条款号，扣分不可追溯，应核实原文后补条款" % key)
+        raise Refusal("系数 %s 可算但未登记条款号，扣分不可追溯，应核实原文后补条款" % key)
     return coef
 
 
-def _clause(coef):
+def clause_of(coef):
     # type: (object) -> str
     for basis in coef.basis:
         if basis.clause:
@@ -154,7 +154,7 @@ def _value_number(coef, field):
     values = coef.values if isinstance(coef.values, dict) else {}
     raw = values.get(field)
     if not isinstance(raw, (int, float)) or isinstance(raw, bool):
-        raise _Refuse("系数 %s 的 %s 不是数值（实际 %r），未核对不出数" % (coef.key, field, raw))
+        raise Refusal("系数 %s 的 %s 不是数值（实际 %r），未核对不出数" % (coef.key, field, raw))
     return float(raw)
 
 
@@ -189,44 +189,44 @@ def _distress_deductions(segment, ratio_coef):
     table = models.DISTRESS_DICTIONARY.get(str(surface_type), {})
     ratios = ratio_coef.values.get("ratios") if isinstance(ratio_coef.values, dict) else None
     if not isinstance(ratios, dict):
-        raise _Refuse("系数 %s 的 values 缺 ratios 映射，换算式无法落地" % ratio_coef.key)
+        raise Refusal("系数 %s 的 values 缺 ratios 映射，换算式无法落地" % ratio_coef.key)
     out = []  # type: List[Dict[str, object]]
     for row in segment.get("distress_rows") or []:
         distress_type = str(row.get("distress_type") or "")
         severity = str(row.get("severity") or "")
         entry = table.get(distress_type)
         if entry is None:
-            raise _Refuse(
+            raise Refusal(
                 "破损类型 %r 不在 %s 路面字典里（台账行 %s），扣分比率格无从取值"
                 % (distress_type, surface_type, row.get("source_row_no"))
             )
         if severity not in models.SEVERITY_LEVELS:
-            raise _Refuse(
+            raise Refusal(
                 "破损程度 %r 不在字典档位 %s 里（台账行 %s）"
                 % (severity, "/".join(models.SEVERITY_LEVELS), row.get("source_row_no"))
             )
         unit = str(row.get("quantity_unit") or "")
         if unit != entry["unit"]:
-            raise _Refuse(
+            raise Refusal(
                 "%s 按字典口径应以 %s 计，本行记为 %s（台账行 %s），换算分母对不上"
                 % (distress_type, entry["unit"], unit, row.get("source_row_no"))
             )
         quantity = row.get("quantity")
         if not isinstance(quantity, (int, float)) or isinstance(quantity, bool):
-            raise _Refuse("%s 的数量不是数值（台账行 %s）" % (distress_type, row.get("source_row_no")))
+            raise Refusal("%s 的数量不是数值（台账行 %s）" % (distress_type, row.get("source_row_no")))
         if float(quantity) < 0:
-            raise _Refuse(
+            raise Refusal(
                 "%s（%s）数量为负：%s %s（台账行 %s），扣分不可解释"
                 % (distress_type, severity, quantity, unit, row.get("source_row_no"))
             )
         denominator = _extent_denominator(entry["extent"], segment)
         if denominator is None:
-            raise _Refuse(
+            raise Refusal(
                 "%s 需要%s才能算占评定单元的比例，台账里缺该属性（台账行 %s）"
                 % (distress_type, MISSING_GEOMETRY_HINT.get(entry["extent"], entry["extent"]), row.get("source_row_no"))
             )
         if float(quantity) > denominator:
-            raise _Refuse(
+            raise Refusal(
                 "%s 数量 %s %s 超过该路段几何上界 %s %s（台账行 %s），占比失去意义"
                 % (
                     distress_type,
@@ -239,12 +239,12 @@ def _distress_deductions(segment, ratio_coef):
             )
         by_severity = ratios.get(distress_type)
         if not isinstance(by_severity, dict):
-            raise _Refuse("系数 %s 未登记破损类型 %s 的扣分比率" % (ratio_coef.key, distress_type))
+            raise Refusal("系数 %s 未登记破损类型 %s 的扣分比率" % (ratio_coef.key, distress_type))
         ratio = by_severity.get(severity)
         if not isinstance(ratio, (int, float)) or isinstance(ratio, bool):
-            raise _Refuse("系数 %s 未登记 %s 在 %s 程度的扣分比率" % (ratio_coef.key, distress_type, severity))
+            raise Refusal("系数 %s 未登记 %s 在 %s 程度的扣分比率" % (ratio_coef.key, distress_type, severity))
         if not 0.0 <= float(ratio) <= 1.0:
-            raise _Refuse(
+            raise Refusal(
                 "系数 %s 的 %s/%s 比率 %s 不在 0～1 之间，扣分比率越界即换算式不成立"
                 % (ratio_coef.key, distress_type, severity, ratio)
             )
@@ -257,7 +257,7 @@ def _distress_deductions(segment, ratio_coef):
                 "quantity_unit": unit,
                 "source_row_no": row.get("source_row_no"),
                 "coefficient_key": ratio_coef.key,
-                "clause": _clause(ratio_coef),
+                "clause": clause_of(ratio_coef),
                 "ratio": float(ratio),
                 "share_of_unit": share_of_unit,
                 "deducted_points": float(ratio) * share_of_unit * SCORE_SCALE,
@@ -278,18 +278,18 @@ def _component_score(component, coef, value):
     if component == COMPONENT_RUTTING:
         ideal, zero = params.get("ideal_mm"), params.get("zero_mm")
         if not isinstance(ideal, (int, float)) or not isinstance(zero, (int, float)):
-            raise _Refuse("系数 %s 缺 ideal_mm / zero_mm，车辙换算式无法落地" % coef.key)
+            raise Refusal("系数 %s 缺 ideal_mm / zero_mm，车辙换算式无法落地" % coef.key)
         if float(zero) <= float(ideal):
-            raise _Refuse("系数 %s 的 zero_mm(%s) 不大于 ideal_mm(%s)，换算方向不成立" % (coef.key, zero, ideal))
+            raise Refusal("系数 %s 的 zero_mm(%s) 不大于 ideal_mm(%s)，换算方向不成立" % (coef.key, zero, ideal))
         return _clamp_scale(SCORE_SCALE * (float(zero) - value) / (float(zero) - float(ideal)))
     if component == COMPONENT_SKID:
         zero, ideal = params.get("zero_value"), params.get("ideal_value")
         if not isinstance(zero, (int, float)) or not isinstance(ideal, (int, float)):
-            raise _Refuse("系数 %s 缺 zero_value / ideal_value，抗滑换算式无法落地" % coef.key)
+            raise Refusal("系数 %s 缺 zero_value / ideal_value，抗滑换算式无法落地" % coef.key)
         if float(ideal) <= float(zero):
-            raise _Refuse("系数 %s 的 ideal_value(%s) 不大于 zero_value(%s)，换算方向不成立" % (coef.key, ideal, zero))
+            raise Refusal("系数 %s 的 ideal_value(%s) 不大于 zero_value(%s)，换算方向不成立" % (coef.key, ideal, zero))
         return _clamp_scale(SCORE_SCALE * (value - float(zero)) / (float(ideal) - float(zero)))
-    raise _Refuse("未登记的分项 %s，不允许参与 PCI 合成" % component)
+    raise Refusal("未登记的分项 %s，不允许参与 PCI 合成" % component)
 
 
 def _clamp_scale(score):
@@ -304,42 +304,42 @@ def _check_indicator_domain(segment, component, value):
     kind = segment.get("skid_indicator_kind") if column == "skid_indicator" else None
     domain = models.indicator_domain(column, kind)
     if domain is None:
-        raise _Refuse("检测列 %s 没有登记定义域，无法判取值是否可用" % column)
+        raise Refusal("检测列 %s 没有登记定义域，无法判取值是否可用" % column)
     low, high = domain
     if (low is not None and value < low) or (high is not None and value > high):
-        raise _Refuse(
+        raise Refusal(
             "%s = %s 超出该指标定义域 [%s, %s]，扣分不可解释" % (column, value, low, high)
         )
     if component == COMPONENT_SKID and str(segment.get("skid_indicator_kind") or "") not in models.SKID_INDICATOR_KINDS:
-        raise _Refuse("抗滑指标量纲 %r 未登记，换算式无从取值" % segment.get("skid_indicator_kind"))
+        raise Refusal("抗滑指标量纲 %r 未登记，换算式无从取值" % segment.get("skid_indicator_kind"))
 
 
 # ---- 分级 ----
 
 
-def _grade(pci, grade_coef):
+def grade_from_bands(pci, grade_coef):
     # type: (float, object) -> str
     params = grade_coef.values if isinstance(grade_coef.values, dict) else {}
     boundary = params.get("boundary")
     if boundary not in GRADE_BOUNDARIES:
-        raise _Refuse(
+        raise Refusal(
             "系数 %s 未登记分级边界开闭口径（boundary 应为 %s 之一）—— 含界与否要按原文确认，引擎不猜"
             % (grade_coef.key, "/".join(GRADE_BOUNDARIES))
         )
     bands = params.get("bands")
     if not isinstance(bands, list) or not bands:
-        raise _Refuse("系数 %s 的 bands 不是非空数组" % grade_coef.key)
+        raise Refusal("系数 %s 的 bands 不是非空数组" % grade_coef.key)
     prepared = []  # type: List[Tuple[float, str]]
     for band in bands:
         if not isinstance(band, dict) or band.get("grade") in (None, ""):
-            raise _Refuse("系数 %s 的某个档位缺 grade 名" % grade_coef.key)
+            raise Refusal("系数 %s 的某个档位缺 grade 名" % grade_coef.key)
         lower = band.get("min")
         if not isinstance(lower, (int, float)) or isinstance(lower, bool):
-            raise _Refuse("系数 %s 的档位 %s 缺数值下界 min" % (grade_coef.key, band.get("grade")))
+            raise Refusal("系数 %s 的档位 %s 缺数值下界 min" % (grade_coef.key, band.get("grade")))
         prepared.append((float(lower), str(band["grade"])))
     lowers = [lower for lower, _name in prepared]
     if len(set(lowers)) != len(lowers):
-        raise _Refuse("系数 %s 的分级下界有重复值，档位无法唯一" % grade_coef.key)
+        raise Refusal("系数 %s 的分级下界有重复值，档位无法唯一" % grade_coef.key)
     prepared.sort(key=lambda item: -item[0])
     for lower, name in prepared:
         satisfied = pci > lower if boundary == "lower_exclusive" else pci >= lower
@@ -399,11 +399,11 @@ def compute_pci(segment, ruleset, blockers=()):
         refusals = []  # type: List[str]
         for key in required:
             try:
-                coefficients[key] = _coefficient(ruleset, key)
-            except _Refuse as exc:
+                coefficients[key] = coefficient(ruleset, key)
+            except Refusal as exc:
                 refusals.append(exc.reason)
         if refusals:
-            raise _Refuse("；".join(refusals))
+            raise Refusal("；".join(refusals))
         ratio_coef = coefficients[DEDUCT_RATIO_KEY[surface_type]]
         weight_coef = coefficients[PCI_WEIGHT_KEY[surface_type]]
         grade_coef = coefficients[GRADE_THRESHOLD_KEY]
@@ -415,10 +415,10 @@ def compute_pci(segment, ruleset, blockers=()):
 
         weights = weight_coef.values.get("weights") if isinstance(weight_coef.values, dict) else None
         if not isinstance(weights, dict):
-            raise _Refuse("系数 %s 的 values 缺 weights 映射，PCI 合成无从取值" % weight_coef.key)
+            raise Refusal("系数 %s 的 values 缺 weights 映射，PCI 合成无从取值" % weight_coef.key)
         unknown = sorted(name for name in weights if name not in COMPONENT_NAMES)
         if unknown:
-            raise _Refuse("系数 %s 登记了未认定的分项 %s" % (weight_coef.key, ",".join(unknown)))
+            raise Refusal("系数 %s 登记了未认定的分项 %s" % (weight_coef.key, ",".join(unknown)))
 
         excluded = []  # type: List[str]
         for component in (COMPONENT_RIDE, COMPONENT_RUTTING, COMPONENT_SKID):
@@ -428,7 +428,7 @@ def compute_pci(segment, ruleset, blockers=()):
                 excluded.append("%s（缺测 %s）" % (component, column))
                 continue
             if not isinstance(raw, (int, float)) or isinstance(raw, bool):
-                raise _Refuse("检测列 %s 的值不是数值（%r）" % (column, raw))
+                raise Refusal("检测列 %s 的值不是数值（%r）" % (column, raw))
             coef = coefficients[COMPONENT_KEY[component]]
             _check_indicator_domain(segment, component, float(raw))
             scores[component] = _component_score(component, coef, float(raw))
@@ -440,9 +440,9 @@ def compute_pci(segment, ruleset, blockers=()):
                 continue
             weight = weights.get(component)
             if not isinstance(weight, (int, float)) or isinstance(weight, bool):
-                raise _Refuse("系数 %s 未登记分项 %s 的权重" % (weight_coef.key, component))
+                raise Refusal("系数 %s 未登记分项 %s 的权重" % (weight_coef.key, component))
             if float(weight) <= 0:
-                raise _Refuse("系数 %s 的分项 %s 权重为 %s，非正权重无法加权" % (weight_coef.key, component, weight))
+                raise Refusal("系数 %s 的分项 %s 权重为 %s，非正权重无法加权" % (weight_coef.key, component, weight))
             used[component] = float(weight)
         weight_total = sum(used.values())
 
@@ -478,7 +478,7 @@ def compute_pci(segment, ruleset, blockers=()):
                     quantity=float((segment.get("indicators") or {}).get(COMPONENT_SOURCE_COLUMN[component])),
                     quantity_unit=COMPONENT_SOURCE_COLUMN[component],
                     coefficient_key=coef.key,
-                    clause=_clause(coef),
+                    clause=clause_of(coef),
                     deducted_points=quantize(points),
                     share=_share(points, shortfall),
                     source_row_no=None,
@@ -500,14 +500,14 @@ def compute_pci(segment, ruleset, blockers=()):
             ),
             deducted_total=quantize(shortfall),
             pci=quantize(pci),
-            grade=_grade(quantize(pci), grade_coef),
+            grade=grade_from_bands(quantize(pci), grade_coef),
             contributions=contributions,
             ruleset_id=ruleset.ruleset_id,
             ruleset_version=ruleset.version,
         )
         result.check_contract()
         return result
-    except _Refuse as exc:
+    except Refusal as exc:
         return blocked(exc.reason)
 
 
@@ -672,6 +672,18 @@ def result_payload(result):
         "ruleset_version": result.ruleset_version,
         "contributions": trace.expand_contributions(result),
     }
+
+
+def find_result(results, segment_id, year):
+    # type: (Sequence[res.PciResult], str, int) -> Optional[res.PciResult]
+    """在评定结果清单里定位"该路段 × 该年度"的结果；没有即 None。
+
+    下游（M4 汇总、年对比、对策）都靠它接同一条 `assess_year` 输出，**不现算、不另起取数通路**。
+    """
+    for result in results or []:
+        if result.segment_id == segment_id and result.year == year:
+            return result
+    return None
 
 
 def summarize_status(results):

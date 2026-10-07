@@ -122,6 +122,8 @@ MANIFEST_TOP_LEVEL_KEYS = (
 )
 
 #: 真值四列各自受哪几格系数支配（决定 pending 令牌里点名哪些 key）
+#: M4 起：汇总列的支配格与 `mqi.engine.aggregation_required_keys()` 同批，逐字对账有测试；
+#: 对策列的支配格与 `strategy.rules.action_required_keys()` 同批。
 TRUTH_GOVERNING_KEYS = {
     "pci_truth": (
         "deduct_ratio.{surface}_distress",
@@ -131,7 +133,7 @@ TRUTH_GOVERNING_KEYS = {
         "pci_weight.{surface}",
     ),
     "grade_truth": ("grade_threshold.pci",),
-    "mqi_partial_truth": ("mqi_weight.pavement",),
+    "mqi_partial_truth": ("mqi_weight.pavement", "grade_threshold.mqi"),
     "recommended_action_truth": ("action_rule.maintenance_trigger",),
 }
 
@@ -688,21 +690,67 @@ def ruleset_pending_keys(ruleset, templates, surface_type):
     return sorted(pending)
 
 
-def scoring_gate_pending_keys(ruleset):
-    # type: (object) -> List[str]
-    """真值评分两列能否出数：两种路面的必需格全部生效才行，返回仍未生效的 key。
+def gate_pending_keys(ruleset, column):
+    # type: (object, str) -> List[str]
+    """某一真值列能否出数：该列的**必需格**在两种路面上全部生效才行，返回仍未生效的 key。
 
-    判据必须是"必需格"而不是"生效格总数"：M3 会让用户自定的容差格先生效，
-    届时生效 1 格但评定路径一格都凑不齐 —— 按总格数说话就等于对外宣称"评分列有数"，
-    而真值两列实际仍是 pending 令牌。与 `_score_truth` 用同一个 `ruleset_pending_keys`。
+    判据必须是"必需格"而不是"生效格总数"（`plan/02` §9 第 23 条）：M3 起内置包"生效 1 格、
+    系数门开"，但评定 / 汇总 / 对策三条路径一格都没凑齐 —— 按总格数说话就等于对外宣称出数了。
+    与 `_score_truth` 用同一个 `ruleset_pending_keys`。
     """
-    templates = TRUTH_GOVERNING_KEYS["pci_truth"] + TRUTH_GOVERNING_KEYS["grade_truth"]
     pending = []  # type: List[str]
     for surface_type in models.SURFACE_TYPES:
-        for key in ruleset_pending_keys(ruleset, templates, surface_type):
+        for key in ruleset_pending_keys(ruleset, TRUTH_GOVERNING_KEYS[column], surface_type):
             if key not in pending:
                 pending.append(key)
     return sorted(pending)
+
+
+def scoring_gate_pending_keys(ruleset):
+    # type: (object) -> List[str]
+    """评分两列（pci / grade）的出数判据：两种路面的必需格全部生效。"""
+    pending = []  # type: List[str]
+    for column in PCI_TRUTH_COLUMNS:
+        for key in gate_pending_keys(ruleset, column):
+            if key not in pending:
+                pending.append(key)
+    return sorted(pending)
+
+
+def aggregation_gate_pending_keys(ruleset):
+    # type: (object) -> List[str]
+    """汇总列（mqi_partial_truth）的出数判据 = `mqi.engine.aggregation_required_keys()`。"""
+    return gate_pending_keys(ruleset, "mqi_partial_truth")
+
+
+def action_gate_pending_keys(ruleset):
+    # type: (object) -> List[str]
+    """对策列（recommended_action_truth）的出数判据 = `strategy.rules.action_required_keys()`。"""
+    return gate_pending_keys(ruleset, "recommended_action_truth")
+
+
+def truth_gate_notes(ruleset):
+    # type: (object) -> Dict[str, Dict[str, object]]
+    """逐真值列的出数判据（必需格口径），供 manifest 与 `bench generate` 说明行共用。
+
+    每一列的措辞都只说"这一列的必需格还缺哪几格"，绝不按本包生效格总数说话 ——
+    部分解锁时（M3 起就是这个状态）总数口径会对外宣称"某列已出数值"，而真值仍是令牌。
+    """
+    notes = {}  # type: Dict[str, Dict[str, object]]
+    for column in TRUTH_SCORE_COLUMNS:
+        pending = gate_pending_keys(ruleset, column)
+        notes[column] = {
+            "required_keys": list(TRUTH_GOVERNING_KEYS[column]),
+            "pending_keys": pending,
+            "state": "numeric" if not pending else "pending",
+            "note": (
+                "必需格已全部生效 → 该列由对应引擎算出数值（引擎拒算的对象仍写 pending 令牌）。"
+                if not pending
+                else "必需格仍有 %d 格未生效（%s）→ 该列一律为 pending:coeff 令牌：未核对不出数。"
+                     % (len(pending), "、".join(pending))
+            ),
+        }
+    return notes
 
 
 def _score_truth(surface_type, ruleset, probe_input):
@@ -790,26 +838,48 @@ def _probe_input(base, cell_rows, length_m, panel_count, first_row_index):
 
 def _numeric_truth_probe(column, surface_type, ruleset, probe_input):
     # type: (str, str, object, Dict[str, object]) -> str
-    """数值真值通路：必须由评定引擎本身给出（同源），引擎未就位或拒算则如实标 pending。
+    """数值真值通路：必须由引擎本身给出（同源），引擎未就位或拒算则如实标 pending。
 
     系数门已经在上游放行（`_score_truth` 先查 `TRUTH_GOVERNING_KEYS`），到这里还剩两种可能：
-    所属模块仍是占位符（M4/M5 的 mqi、对策列）→ 点名模块与里程碑；
-    评定引擎对该对象拒算（台账含异常行）→ 仍不出数，因为"未核对不出数"对真值同样成立。
+    所属模块仍是占位符（未来里程碑新增的列）→ 点名模块与里程碑；
+    引擎对该对象拒算（台账含异常行、或该列依赖的上游值未出数）→ 仍不出数，
+    因为"未核对不出数"对真值同样成立。
+
+    四列共用**一次** `compute_pci` 与一次路段级汇总：真值四列之间必须自洽
+    （pci 有数、mqi 却拒算是假账），也不允许出现第二套扣分或第二套加权公式。
     """
     from road_mqi_checker import _meta, results as res
+    from road_mqi_checker.mqi import engine as mqi_engine
+    from road_mqi_checker.strategy import rules as action_rules
 
     module_key = TRUTH_ENGINE_MODULES[column]
     short_name = module_key.replace("road_mqi_checker.", "")
     if module_key in _meta.PLACEHOLDER_MILESTONES:
         return PENDING_ENGINE_PREFIX + "%s@%s" % (short_name, _meta.PLACEHOLDER_MILESTONES[module_key])
-    if column not in PCI_TRUTH_COLUMNS:
-        return PENDING_ENGINE_PREFIX + "%s.no_truth_hook" % short_name
     pci_result = pci_engine.compute_pci(probe_input, ruleset)
     if pci_result.status in (res.STATUS_BLOCKED, res.STATUS_UNCOMPARABLE):
         return PENDING_ENGINE_PREFIX + "pci.engine.blocked"
     if column == "pci_truth":
         return _number(pci_result.pci, pci_engine.PCI_DECIMALS)
-    return pci_result.grade
+    if column == "grade_truth":
+        return pci_result.grade
+
+    mqi_result = mqi_engine.aggregate_segment_mqi(
+        None, pci_result.segment_id, pci_result.year, [pci_result], ruleset
+    )
+    if mqi_result.mqi is None:
+        return PENDING_ENGINE_PREFIX + "mqi.engine.blocked"
+    if column == "mqi_partial_truth":
+        return _number(mqi_result.mqi, pci_engine.PCI_DECIMALS)
+    suggestions = action_rules.suggest_actions(
+        None, pci_result.year, [pci_result], [mqi_result], ruleset
+    )
+    if len(suggestions) != 1:
+        return PENDING_ENGINE_PREFIX + "strategy.rules.no_object"
+    suggestion = suggestions[0]
+    if suggestion.action_class in (None, ""):
+        return PENDING_ENGINE_PREFIX + "strategy.rules.blocked"
+    return str(suggestion.action_class)
 
 
 def build_cell(route_id, year, rng, ruleset, enabled=None):
@@ -1070,6 +1140,8 @@ def generate(out_dir, seed=DEFAULT_SEED, routes=DEFAULT_ROUTES, years=DEFAULT_YE
                      "未核对不出数；本包生效系数 %d 格不等于评分列可出数。"
                      % (len(scoring_pending), "、".join(scoring_pending), summary["computable"])
             ),
+            # 四列逐个说：M4 起汇总列与对策列各有自己的必需格，共用同一道判据
+            "truth_gates": truth_gate_notes(ruleset),
         },
     }
     assert sorted(manifest) == sorted(MANIFEST_TOP_LEVEL_KEYS), "manifest 顶层键与 plan/03 登记的格式不一致"

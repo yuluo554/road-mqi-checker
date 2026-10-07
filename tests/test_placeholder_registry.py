@@ -157,8 +157,8 @@ def test_milestone_docs_are_declared():
 
 
 def test_current_milestone_matches_delivered_work():
-    """M2 评定内核已交付：PCI 换算、贡献展开、assess 命令都真跑，里程碑指针随之前进。"""
-    assert _meta.MILESTONE == "M2"
+    """M4 汇总/对策/年对比已交付：三级加权、规则链、命令面都真跑，里程碑指针随之前进。"""
+    assert _meta.MILESTONE == "M4"
 
 
 def test_pci_kernel_is_no_longer_a_placeholder():
@@ -169,6 +169,31 @@ def test_pci_kernel_is_no_longer_a_placeholder():
         assert key not in _registry(), "%s 仍登记为占位符" % key
         assert key not in _raised_keys(), "%s 里还有 MilestoneNotImplemented" % key
     assert callable(engine.compute_pci) and callable(trace.expand_contributions)
+
+
+def test_m4_modules_are_no_longer_placeholders():
+    """M4 交付的模块同样要移除并真跑；登记表随交付缩减（M0 的 9 个 → 现在只剩 M5/M6）。"""
+    from road_mqi_checker.mqi import engine as mqi_engine
+    from road_mqi_checker.strategy import compare, rules
+
+    for key in (
+        "road_mqi_checker.mqi.engine",
+        "road_mqi_checker.strategy.rules",
+        "road_mqi_checker.strategy.compare",
+    ):
+        assert key not in _registry(), "%s 仍登记为占位符" % key
+        assert key not in _raised_keys(), "%s 里还有 MilestoneNotImplemented" % key
+    assert callable(mqi_engine.aggregate_segment_mqi)
+    assert callable(mqi_engine.aggregate_route_mqi)
+    assert callable(mqi_engine.aggregate_network_mqi)
+    assert callable(mqi_engine.assign_grade)
+    assert callable(rules.suggest_actions) and callable(rules.rank_priority)
+    assert callable(compare.compare_years) and callable(compare.explain_change)
+    assert set(_registry()) == {
+        "road_mqi_checker.bench.evaluation",
+        "road_mqi_checker.report.exporters",
+        "road_mqi_checker.gui.app",
+    }, "占位符登记表应只剩 M5/M6 三个模块"
 
 
 def test_placeholder_message_is_actionable():
@@ -201,6 +226,11 @@ def test_no_ghost_modules_in_package():
         "pci",
         "pci.engine",
         "pci.trace",
+        "mqi",
+        "mqi.engine",
+        "strategy",
+        "strategy.rules",
+        "strategy.compare",
         "report",
         "report.disclaimer",
         "gui",

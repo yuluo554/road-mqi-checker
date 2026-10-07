@@ -21,7 +21,7 @@ from road_mqi_checker.ledger import db as ledger_db
 from road_mqi_checker.ledger import importer
 from road_mqi_checker.mqi import engine as mqi_engine
 from road_mqi_checker.report import exporters
-from road_mqi_checker.results import STATUS_BLOCKED, STATUS_OK, STATUS_PARTIAL
+from road_mqi_checker.results import STATUS_BLOCKED, STATUS_OK, STATUS_PARTIAL, STATUS_UNCOMPARABLE
 from road_mqi_checker.ruleset import loader as ruleset_loader
 
 PKG_NAME = "road-mqi-checker"
@@ -72,6 +72,7 @@ def build_parser():
     compare_p = sub.add_parser("compare", help="年对比与优先序（M4）")
     compare_p.add_argument("--from-year", required=True, type=int, dest="year_from")
     compare_p.add_argument("--to-year", required=True, type=int, dest="year_to")
+    compare_p.add_argument("--segment", default=None, help="只对比该路段；省略则对比两个年度都在台账里的路段")
 
     bench_p = sub.add_parser("bench", help="合成数据（M1 已可用）与基准评测（M5）")
     bench_p.add_argument("action", choices=["generate", "run"])
@@ -144,6 +145,20 @@ def cmd_selfcheck(args):
     # 系数门：M0 常态是 closed（一格已核对系数都没有），这是诚实状态而非故障
     report["coefficient_gate"] = {"open": active > 0, "active": active, "blocked": blocked}
 
+    # 出数判据 = 必需格全生效，不是生效格总数（plan/02 §9 第 23 条）。
+    # 三条路径各自点名还缺哪几格，避免"生效 1 格"被读成"某条路径已可出数"。
+    from road_mqi_checker.bench import generator
+
+    working = ruleset_loader.select_ruleset()
+    path_gates = {
+        "assess": generator.scoring_gate_pending_keys(working),
+        "aggregate": generator.aggregation_gate_pending_keys(working),
+        "actions": generator.action_gate_pending_keys(working),
+    }
+    report["path_gates"] = {
+        name: {"pending_keys": keys, "can_emit_numbers": not keys} for name, keys in path_gates.items()
+    }
+
     conn = _connect(args)
     ledger_db.initialize(conn)
     tables = ledger_db.table_names(conn)
@@ -167,6 +182,16 @@ def cmd_selfcheck(args):
         "data_dir: %s" % report["data_dir"],
         "ruleset 包: %d 个，生效系数 %d 格，拒算系数 %d 格 → 系数门 %s"
         % (len(summaries), active, blocked, "开" if active else "关（未核对系数不进评定路径）"),
+        "出数判据（必需格是否全生效）："
+        + " / ".join(
+            "%s %s"
+            % (
+                name,
+                "可出数" if report["path_gates"][name]["can_emit_numbers"] else "缺 %d 格不出数" % len(report["path_gates"][name]["pending_keys"]),
+            )
+            for name in ("assess", "aggregate", "actions")
+        )
+        + "（生效格数不等于可出数）",
         "台账 schema: %s" % ("ok" if report["ledger_schema"]["ok"] else "FAIL"),
         "GUI 页签: %s" % " / ".join(report["gui_pages"]),
         "待实现模块: %d 个（见 plan/02 §8）" % len(report["placeholders"]),
@@ -261,6 +286,7 @@ def cmd_bench(args):
         out_dir = args.out if args.out else os.path.join(find_data_dir(start=os.getcwd()), "raw")
         result = generator.generate(out_dir, seed=seed, force=args.force)
         scoring_pending = generator.scoring_gate_pending_keys(ruleset_loader.select_ruleset())
+        gate_notes = generator.truth_gate_notes(ruleset_loader.select_ruleset())
         totals = result["totals"]
         payload = dict(result)
         payload["seed"] = seed
@@ -285,6 +311,8 @@ def cmd_bench(args):
                          ruleset_loader.select_ruleset().summary()["computable"],
                      )
             ),
+            "汇总列 mqi_partial_truth：" + gate_notes["mqi_partial_truth"]["note"],
+            "对策列 recommended_action_truth：" + gate_notes["recommended_action_truth"]["note"],
         ]
         _print(payload, args.as_json, lines=lines)
         return EXIT_OK
@@ -342,22 +370,155 @@ def cmd_assess(args):
 
 
 def cmd_aggregate(args):
+    from road_mqi_checker.bench import generator
+    from road_mqi_checker.pci import engine as pci_engine
+    from road_mqi_checker.strategy import rules as action_rules
+
     conn, ruleset = _prepared(args)
-    by_level = {
-        "segment": lambda: mqi_engine.aggregate_segment_mqi(conn, "", args.year, [], ruleset),
-        "route": lambda: mqi_engine.aggregate_route_mqi(conn, "", args.year, [], ruleset),
-        "network": lambda: mqi_engine.aggregate_network_mqi(conn, args.year, [], ruleset),
+    pci_results = pci_engine.assess_year(conn, args.year, ruleset)
+    results = mqi_engine.aggregate_year(conn, args.year, pci_results, ruleset, level=args.level)
+    counts = mqi_engine.summarize_status(results)
+    suggestions = action_rules.suggest_actions(conn, args.year, pci_results, results, ruleset)
+    ranked = action_rules.rank_priority(suggestions, "pci", ascending=True)
+    # 出数判据只走生成器那一份"必需格"实现（plan/02 §9 第 23 条），命令面不自建判据
+    pending_keys = generator.aggregation_gate_pending_keys(ruleset)
+    payload = {
+        "year": args.year,
+        "level": args.level,
+        "ruleset": {"ruleset_id": ruleset.ruleset_id, "version": ruleset.version},
+        "required_keys": list(mqi_engine.aggregation_required_keys()),
+        "pending_keys": pending_keys,
+        "counts": counts,
+        "results": [mqi_engine.result_payload(result) for result in results],
+        "priority_list": [action_rules.result_payload(item) for item in ranked],
     }
-    by_level[args.level]()
-    return EXIT_OK
+    lines = [
+        "MQI 汇总（%s 级）：%s 年度共 %d 个对象（ok %d / partial %d / blocked %d / uncomparable %d），规则集 %s v%s"
+        % (
+            args.level,
+            args.year,
+            len(results),
+            counts[STATUS_OK],
+            counts[STATUS_PARTIAL],
+            counts[STATUS_BLOCKED],
+            counts[STATUS_UNCOMPARABLE],
+            ruleset.ruleset_id,
+            ruleset.version,
+        )
+    ]
+    for result in results:
+        if result.mqi is None:
+            lines.append("  %s/%s %s：%s" % (result.level, result.object_id, result.status, result.blocked_reason))
+        else:
+            lines.append(
+                "  %s/%s %s MQI=%s 等级=%s 加权里程=%s m 纳入分项=%s"
+                % (
+                    result.level,
+                    result.object_id,
+                    result.status,
+                    result.mqi,
+                    result.grade if result.grade is not None else "不判定（部分口径）",
+                    result.weighted_length_m,
+                    "/".join(result.included_components) or "-",
+                )
+            )
+            if result.scope_note:
+                lines.append("    口径：%s" % result.scope_note)
+    for item in ranked[:10]:
+        if item.action_class:
+            lines.append(
+                "  对策 %s/%s PCI=%s → %s（规则 %s，依据 %s）"
+                % (item.segment_id, item.year, item.pci, item.action_class, item.rule_id, item.clause)
+            )
+        else:
+            lines.append("  对策 %s/%s %s：%s" % (item.segment_id, item.year, item.status, item.blocked_reason))
+    if counts[STATUS_BLOCKED] or counts[STATUS_PARTIAL]:
+        lines.append(
+            "注：blocked 的数值字段一律为空，不是 0；partial 只给已注明口径的部分值，"
+            "不冒充完整 MQI，也不套用完整 MQI 的分级表述。"
+        )
+    _print(payload, args.as_json, lines=lines)
+    # 退出码口径（plan/02 §6）：存在非 ok 对象 = 1 降级完成
+    return EXIT_DEGRADED if any(result.status != STATUS_OK for result in results) else EXIT_OK
 
 
 def cmd_compare(args):
+    from road_mqi_checker.pci import engine as pci_engine
     from road_mqi_checker.strategy import compare
 
     conn, ruleset = _prepared(args)
-    compare.compare_years(conn, "", args.year_from, args.year_to, [], ruleset)
-    return EXIT_OK
+    pci_results = list(pci_engine.assess_year(conn, args.year_from, ruleset))
+    pci_results.extend(pci_engine.assess_year(conn, args.year_to, ruleset))
+    if args.segment:
+        segment_ids = [args.segment]
+    else:
+        segment_ids = compare.segment_ids_in_ledger(conn, args.year_from, args.year_to)
+        if not segment_ids:
+            raise InputUnavailable(
+                "台账里 %s 与 %s 两个年度都没有路段行，无从对比（先 rmqc import）" % (args.year_from, args.year_to)
+            )
+    results = [
+        compare.compare_years(conn, segment_id, args.year_from, args.year_to, pci_results, ruleset)
+        for segment_id in segment_ids
+    ]
+    counts = compare.summarize_status(results)
+    payload = {
+        "year_from": args.year_from,
+        "year_to": args.year_to,
+        "segment": args.segment,
+        "ruleset": {"ruleset_id": ruleset.ruleset_id, "version": ruleset.version},
+        "counts": counts,
+        "results": [compare.result_payload(result) for result in results],
+    }
+    lines = [
+        "年对比 %s→%s：%d 个对象（ok %d / partial %d / blocked %d / uncomparable %d）"
+        % (
+            args.year_from,
+            args.year_to,
+            len(results),
+            counts[STATUS_OK],
+            counts[STATUS_PARTIAL],
+            counts[STATUS_BLOCKED],
+            counts[STATUS_UNCOMPARABLE],
+        )
+    ]
+    for result in results:
+        if result.delta is None:
+            lines.append(
+                "  %s %s：%s%s"
+                % (
+                    result.segment_id,
+                    result.status,
+                    result.blocked_reason,
+                    "（因素 %s）" % result.comparability_reason if result.comparability_reason else "",
+                )
+            )
+        else:
+            lines.append(
+                "  %s Δ=%s 劣化速率=%s/年 等级 %s→%s"
+                % (
+                    result.segment_id,
+                    result.delta,
+                    result.deterioration_rate_per_year,
+                    result.grade_from,
+                    result.grade_to,
+                )
+            )
+            for row in compare.explain_change_rows(result):
+                lines.append(
+                    "    %s（%s）扣分变化 %s（系数 %s，依据 %s）"
+                    % (
+                        row["distress_type"],
+                        row["severity"],
+                        row["deducted_points"],
+                        row["coefficient_key"],
+                        row["clause"],
+                    )
+                )
+    if counts[STATUS_UNCOMPARABLE]:
+        lines.append("注：不可比对象不出变化率、不按重叠里程摊分，只出原因代码与说明。")
+    _print(payload, args.as_json, lines=lines)
+    return EXIT_DEGRADED if any(result.status != STATUS_OK for result in results) else EXIT_OK
 
 
 def cmd_report(args):

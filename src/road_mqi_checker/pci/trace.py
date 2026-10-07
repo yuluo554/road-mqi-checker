@@ -77,15 +77,15 @@ def sorted_contributions(pci_result):
     return sorted(pci_result.contributions, key=order_key)
 
 
-def expand_contributions(pci_result):
-    # type: (res.PciResult) -> List[Dict[str, object]]
-    """把 PciResult 展开成逐条破损/逐指标的贡献清单（列序即 `TRACE_COLUMNS`）。"""
+def expand_list(segment_id, year, contributions):
+    # type: (str, Optional[int], Sequence[res.DeductContribution]) -> List[Dict[str, object]]
+    """把任意一批贡献项展开成 `TRACE_COLUMNS` 结构的行（M4 的变化贡献项走同一套列）。"""
     rows = []  # type: List[Dict[str, object]]
-    for item in sorted_contributions(pci_result):
+    for item in sorted(contributions, key=order_key):
         rows.append(
             {
-                "segment_id": pci_result.segment_id,
-                "year": pci_result.year,
+                "segment_id": segment_id,
+                "year": year,
                 "source_kind": item.source_kind,
                 "distress_type": item.distress_type,
                 "severity": item.severity,
@@ -99,6 +99,12 @@ def expand_contributions(pci_result):
             }
         )
     return rows
+
+
+def expand_contributions(pci_result):
+    # type: (res.PciResult) -> List[Dict[str, object]]
+    """把 PciResult 展开成逐条破损/逐指标的贡献清单（列序即 `TRACE_COLUMNS`）。"""
+    return expand_list(pci_result.segment_id, pci_result.year, pci_result.contributions)
 
 
 def contributions_for_cell(pci_result, distress_type, severity):

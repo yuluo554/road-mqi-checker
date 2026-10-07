@@ -31,6 +31,14 @@ OFFICIAL_CHANNEL_MARKS = (".gov.cn", "标准原文电子版", "出版社")
 
 PCI_COMPONENTS = ("distress", "ride_quality", "rutting", "skid_resistance")
 
+#: M4 新增三条路径的形状口径 —— 词汇从代码取，避免"测试写死一份、引擎另一份"
+from road_mqi_checker.mqi import engine as mqi_engine  # noqa: E402
+from road_mqi_checker.strategy import rules as rules_engine  # noqa: E402
+
+MQI_COMPONENTS = mqi_engine.COMPONENTS
+ACTION_METRICS = rules_engine.ACTION_METRICS
+ACTION_OPS = rules_engine.CONDITION_OPS
+
 PROVENANCE_FIELDS = ("clause", "channel", "verified_at", "locator")
 
 
@@ -161,17 +169,53 @@ def values_shape_problems(coef):
             problems.append("pci_component.skid_resistance 的 weight 必须 > 0")
         if not (isinstance(ideal, (int, float)) and isinstance(zero, (int, float))) or ideal <= zero:
             problems.append("pci_component.skid_resistance 要求 ideal_value > zero_value")
-    elif key.startswith("pci_weight.") or key.startswith("mqi_weight."):
+    elif key.startswith("pci_weight."):
         weights = values.get("weights")
         if not isinstance(weights, dict) or not weights:
             problems.append("%s 缺 weights 对象" % key)
         else:
-            allowed = set(PCI_COMPONENTS) if key.startswith("pci_weight.") else None
-            for extra in sorted(set(weights) - allowed) if allowed else []:
+            for extra in sorted(set(weights) - set(PCI_COMPONENTS)):
                 problems.append("%s 多出未认定分项 %s" % (key, extra))
             for name, weight in weights.items():
                 if not isinstance(weight, (int, float)) or weight <= 0:
                     problems.append("%s 的分项 %s 权重必须 > 0" % (key, name))
+    elif key.startswith("mqi_weight."):
+        # M4 形态：一个分项一格，values 是 {"weight": 正数}（与 mqi.engine 的取值口径一致）
+        component = key.split(".")[1]
+        if component not in MQI_COMPONENTS:
+            problems.append("%s 的分项 %s 不在 MQI 分项词汇里" % (key, component))
+        weight = values.get("weight")
+        if not isinstance(weight, (int, float)) or isinstance(weight, bool) or weight <= 0:
+            problems.append("%s 的 weight 必须是正数值（实际 %r）" % (key, weight))
+    elif key.startswith("action_rule."):
+        # M4 形态：IF/THEN 规则链，条件里的阈值只能出现在这里（与 strategy.rules 的取值口径一致）
+        rules = values.get("rules")
+        if not isinstance(rules, list) or not rules:
+            problems.append("%s 缺非空数组 rules" % key)
+        else:
+            seen = set()
+            for index, rule in enumerate(rules):
+                where = "%s 第 %d 条规则" % (key, index + 1)
+                if not isinstance(rule, dict):
+                    problems.append("%s 不是对象" % where)
+                    continue
+                for field in ("rule_id", "metric", "op", "threshold", "action_class", "scale_band"):
+                    if rule.get(field) in (None, "", {}):
+                        problems.append("%s 缺 %s" % (where, field))
+                if rule.get("rule_id") in seen:
+                    problems.append("%s 的 rule_id 重复，优先序无法确定" % where)
+                seen.add(rule.get("rule_id"))
+                if rule.get("metric") not in ACTION_METRICS:
+                    problems.append("%s 的指标 %r 不在 %s 里" % (where, rule.get("metric"), "/".join(ACTION_METRICS)))
+                if rule.get("op") not in ACTION_OPS:
+                    problems.append("%s 的比较符 %r 非法" % (where, rule.get("op")))
+                if rule.get("op") == "between":
+                    bounds = rule.get("threshold")
+                    lo, hi = (bounds or {}).get("lo"), (bounds or {}).get("hi")
+                    if not (isinstance(lo, (int, float)) and isinstance(hi, (int, float))) or hi <= lo:
+                        problems.append("%s 的 between 阈值要 hi > lo" % where)
+                elif not isinstance(rule.get("threshold"), (int, float)) or isinstance(rule.get("threshold"), bool):
+                    problems.append("%s 的 threshold 必须是数值" % where)
     elif key.startswith("grade_threshold."):
         if values.get("boundary") not in ("lower_inclusive", "lower_exclusive"):
             problems.append("%s 必须显式登记 boundary 含界与否" % key)
@@ -205,12 +249,73 @@ def test_verified_cells_satisfy_the_shape_contract(base_ruleset):
 
 
 def test_shape_contract_covers_the_fully_verified_fixture_packages():
-    """形状门不是空转：两套夹具包六格全生效（夹具档），必须逐个通过同一道门。"""
-    for name in ("pci-fixture-asphalt.json", "pci-fixture-cement.json"):
+    """形状门不是空转：夹具包全格生效（夹具档），必须逐个通过同一道门。
+
+    M4 起还要覆盖汇总/分级/对策三格 —— 引擎读的字段与门查的字段是同一套口径。
+    """
+    expectations = {
+        "pci-fixture-asphalt.json": 6,
+        "pci-fixture-cement.json": 6,
+        "m4-fixture-asphalt.json": 12,
+    }
+    for name, expected in expectations.items():
         pkg = loader.load_file(os.path.join(os.path.dirname(__file__), "fixtures", name), allow_fixture=True)
-        assert len(pkg.computable_coefficients()) == 6, name
+        assert len(pkg.computable_coefficients()) == expected, (name, len(pkg.computable_coefficients()))
         for coef in pkg.coefficients:
             assert not values_shape_problems(coef), "%s / %s" % (name, coef.key)
+
+
+def test_action_rule_shape_contract_rejects_bad_rule_chains():
+    """对策格的形状门要真的会红：缺 rules、重复 rule_id、阈值非数值都要拦下。"""
+    for values, expect in (
+        ({}, "缺非空数组 rules"),
+        ({"rules": [{"metric": "pci", "op": "lt", "threshold": 1.0, "action_class": "甲", "scale_band": "一"}]}, "缺 rule_id"),
+        ({"rules": [{"rule_id": "A", "metric": "nope", "op": "lt", "threshold": 1.0, "action_class": "甲", "scale_band": "一"}]}, "不在"),
+        ({"rules": [{"rule_id": "A", "metric": "pci", "op": "eq", "threshold": 1.0, "action_class": "甲", "scale_band": "一"}]}, "比较符"),
+        ({"rules": [{"rule_id": "A", "metric": "pci", "op": "lt", "threshold": "x", "action_class": "甲", "scale_band": "一"}]}, "必须是数值"),
+        ({"rules": [{"rule_id": "A", "metric": "pci", "op": "between", "threshold": {"lo": 9.0, "hi": 1.0}, "action_class": "甲", "scale_band": "一"}]}, "hi > lo"),
+        (
+            {"rules": [
+                {"rule_id": "A", "metric": "pci", "op": "lt", "threshold": 1.0, "action_class": "甲", "scale_band": "一"},
+                {"rule_id": "A", "metric": "pci", "op": "lt", "threshold": 2.0, "action_class": "乙", "scale_band": "二"},
+            ]},
+            "rule_id 重复",
+        ),
+    ):
+        coef = _coefficient_stub("action_rule.maintenance_trigger", "action_rule", values)
+        assert expect in "；".join(values_shape_problems(coef)), (values, expect)
+
+
+def test_mqi_weight_shape_contract_matches_the_engine_field():
+    """MQI 分项权重格读的是 `weight`（一格一分项），写成 `weights` 必须被门拦下。"""
+    for values, expect in (
+        ({"weights": {"pavement": 55.0}}, "weight 必须是正数值"),
+        ({"weight": 0}, "weight 必须是正数值"),
+        ({"weight": "55"}, "weight 必须是正数值"),
+        ({"weight": 55.0}, ""),
+    ):
+        coef = _coefficient_stub("mqi_weight.pavement", "component_weight", values)
+        joined = "；".join(values_shape_problems(coef))
+        if expect:
+            assert expect in joined, joined
+        else:
+            assert not joined, joined
+
+
+def _coefficient_stub(key, kind, values):
+    # type: (str, str, dict) -> object
+    """只造形状门要读的两样（key / values）：schema 门另有自己的测试，这里不重复过。"""
+    return loader.Coefficient(
+        key=key,
+        kind=kind,
+        surface_type=None,
+        status=st.VERIFIED,
+        values=values,
+        unit="测试",
+        basis=[],
+        register_ref="data/README.md#9",
+        note="",
+    )
 
 
 @pytest.mark.parametrize(
@@ -320,6 +425,30 @@ def test_register_refs_match_their_coefficient_kind(base_ruleset, repo_root):
         if coef.kind in ("deduct_ratio", "component_weight", "grade_threshold"):
             if coef.basis[0].standard_id.startswith("JTG"):
                 assert "JTG 5210-2018" in referenced, "%s 的依据行不含它所引用的标准" % coef.key
+
+
+def test_m4_required_cells_are_all_still_unverified(base_ruleset):
+    """M4 新增的两条路径（汇总、对策）在内置包下同样一格都没生效 ⇒ 一律拒算。
+
+    与评定路径同一口径：判据是"必需格是否全生效"，不是"本包生效了几格"（§9 第 23 条）。
+    """
+    from road_mqi_checker.bench import generator
+    from road_mqi_checker.strategy import rules as rules_engine
+
+    aggregation = mqi_engine.aggregation_required_keys()
+    assert set(aggregation) == set(generator.TRUTH_GOVERNING_KEYS["mqi_partial_truth"])
+    for key in aggregation:
+        coef = base_ruleset.find(key)
+        assert coef is not None, "汇总必需格没在内置包里登记：%s" % key
+        assert not coef.computable, "%s 未拿到原文就生效了" % key
+
+    action_key = rules_engine.action_required_keys()[0]
+    assert not base_ruleset.find(action_key).computable, action_key
+
+    # 三条路径的必需格判据都要报"仍缺"，缺的正是那几格
+    assert generator.aggregation_gate_pending_keys(base_ruleset) == sorted(aggregation)
+    assert generator.action_gate_pending_keys(base_ruleset) == [action_key]
+    assert base_ruleset.summary()["computable"] == len(ALLOWED_VERIFIED_KEYS)
 
 
 def test_required_cells_cover_the_whole_assessment_path(base_ruleset):

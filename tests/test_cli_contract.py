@@ -83,14 +83,12 @@ def test_selfcheck_fails_when_data_dir_missing(run_cli, tmp_path, monkeypatch):
 
 
 def test_placeholder_commands_return_unimplemented(run_cli):
-    """M2 之后仍未实现的命令必须返回 3 并指明里程碑（不许假成功）。
+    """M4 之后仍未实现的命令必须返回 3 并指明里程碑（不许假成功）。
 
-    M1 已交付 `import` / `bench generate`、M2 已交付 `assess`，均不在此列
-    （`assess` 的真跑语义见 test_m2_assess.py）。
+    M1 交付 `import` / `bench generate`、M2 交付 `assess`、M4 交付 `aggregate` / `compare`，
+    均不在此列（真跑语义见 `test_m4_cli.py`）。
     """
     for argv in (
-        ["aggregate", "--year", "2025"],
-        ["compare", "--from-year", "2024", "--to-year", "2025"],
         ["bench", "run"],
         ["report", "--out", "x.csv"],
     ):
@@ -100,8 +98,8 @@ def test_placeholder_commands_return_unimplemented(run_cli):
 
 
 def test_unimplemented_message_names_the_milestone(run_cli):
-    _rc, _out, err = run_cli(["aggregate", "--year", "2025"])
-    assert "M4" in err
+    _rc, _out, err = run_cli(["report", "--out", "x.csv"])
+    assert "M6" in err
 
 
 def test_gui_command_reports_dependency_or_unimplemented(run_cli, repo_root):

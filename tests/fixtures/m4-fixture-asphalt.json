@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "ruleset_id": "m4-fixture-asphalt",
+  "version": "0.0.0-fixture",
+  "title": "M4 汇总/分级/对策夹具（只允许出现在 tests/fixtures，用来跑三级加权与规则链通路）",
+  "applies_to": {
+    "province": "fixture",
+    "year": "fixture",
+    "surface_type": "asphalt"
+  },
+  "notes": "数值全部为夹具数，刻意避开任何规范数字；路面 PCI 六格与 pci-fixture-asphalt.json 一致，因此 M2 的黄金用例在本包下仍可复算。新增格：四个 MQI 分项权重、MQI 分级档位、对策触发规则链。禁止进入 data/ 与内置规则集。",
+  "coefficients": [
+    {
+      "key": "deduct_ratio.asphalt_distress",
+      "kind": "deduct_ratio",
+      "surface_type": "asphalt",
+      "status": "fixture",
+      "values": {
+        "ratios": {
+          "纵向裂缝": {
+            "轻": 0.02,
+            "中": 0.04,
+            "重": 0.08
+          },
+          "横向裂缝": {
+            "轻": 0.02,
+            "中": 0.04,
+            "重": 0.08
+          },
+          "斜向裂缝": {
+            "轻": 0.02,
+            "中": 0.04,
+            "重": 0.08
+          },
+          "啃边": {
+            "轻": 0.02,
+            "中": 0.04,
+            "重": 0.08
+          },
+          "网状裂缝": {
+            "轻": 0.05,
+            "中": 0.1,
+            "重": 0.2
+          },
+          "坑槽": {
+            "轻": 0.05,
+            "中": 0.1,
+            "重": 0.2
+          },
+          "松散": {
+            "轻": 0.05,
+            "中": 0.1,
+            "重": 0.2
+          },
+          "沉陷": {
+            "轻": 0.05,
+            "中": 0.1,
+            "重": 0.2
+          },
+          "泛油": {
+            "轻": 0.05,
+            "中": 0.1,
+            "重": 0.2
+          },
+          "波浪": {
+            "轻": 0.05,
+            "中": 0.1,
+            "重": 0.2
+          }
+        }
+      },
+      "unit": "扣分比率（0～1，按破损类型×程度逐格）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具表 A-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-asphalt.json",
+          "note": "夹具值，禁止进入评定路径以外的任何数据文件"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
+      "note": "换算式：扣分 = 比率 × 该破损占评定单元的几何比例 × 满分"
+    },
+    {
+      "key": "pci_component.ride_quality",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {
+        "weight": 30.0
+      },
+      "unit": "分项权重（行驶质量）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 B-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-asphalt.json",
+          "note": "分项得分直接取实测 RQI 指数"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
+      "note": ""
+    },
+    {
+      "key": "pci_component.rutting",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {
+        "weight": 15.0,
+        "ideal_mm": 2.0,
+        "zero_mm": 18.0
+      },
+      "unit": "分项权重与车辙换算端点",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 B-2",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-asphalt.json",
+          "note": "线性换算：得分 = 满分 ×（zero_mm − 实测）/（zero_mm − ideal_mm），区间外截断"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
+      "note": ""
+    },
+    {
+      "key": "pci_component.skid_resistance",
+      "kind": "component_weight",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {
+        "weight": 15.0,
+        "zero_value": 20.0,
+        "ideal_value": 60.0
+      },
+      "unit": "分项权重与抗滑换算端点",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 B-3",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-asphalt.json",
+          "note": "线性换算：得分 = 满分 ×（实测 − zero_value）/（ideal_value − zero_value），区间外截断"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
+      "note": ""
+    },
+    {
+      "key": "pci_weight.asphalt",
+      "kind": "component_weight",
+      "surface_type": "asphalt",
+      "status": "fixture",
+      "values": {
+        "weights": {
+          "distress": 40.0,
+          "ride_quality": 30.0,
+          "rutting": 15.0,
+          "skid_resistance": 15.0
+        }
+      },
+      "unit": "PCI 合成分项权重",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 C-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-asphalt.json",
+          "note": "权重和不必为 100，引擎按参与分项的权重和归一"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
+      "note": ""
+    },
+    {
+      "key": "grade_threshold.pci",
+      "kind": "grade_threshold",
+      "surface_type": null,
+      "status": "fixture",
+      "values": {
+        "boundary": "lower_inclusive",
+        "bands": [
+          {
+            "grade": "优",
+            "min": 92.5
+          },
+          {
+            "grade": "良",
+            "min": 80.25
+          },
+          {
+            "grade": "中",
+            "min": 65.5
+          },
+          {
+            "grade": "次",
+            "min": 50.75
+          },
+          {
+            "grade": "差",
+            "min": 0.0
+          }
+        ]
+      },
+      "unit": "分级阈值（五档下界）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具表 D-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/pci-fixture-asphalt.json",
+          "note": "含界口径由 boundary 显式登记，引擎不猜"
+        }
+      ],
+      "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
+      "note": ""
+    },
+    {
+      "key": "mqi_weight.pavement",
+      "kind": "component_weight",
+      "status": "fixture",
+      "values": {
+        "weight": 55.0
+      },
+      "unit": "MQI 分项权重（路面）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 E-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/m4-fixture-asphalt.json",
+          "note": "夹具值，禁止进入 data/ 与内置规则集"
+        }
+      ],
+      "register_ref": "tests/fixtures/m4-fixture-asphalt.json",
+      "note": "",
+      "surface_type": null
+    },
+    {
+      "key": "mqi_weight.subgrade",
+      "kind": "component_weight",
+      "status": "fixture",
+      "values": {
+        "weight": 15.0
+      },
+      "unit": "MQI 分项权重（路基）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 E-2",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/m4-fixture-asphalt.json",
+          "note": "夹具值，禁止进入 data/ 与内置规则集"
+        }
+      ],
+      "register_ref": "tests/fixtures/m4-fixture-asphalt.json",
+      "note": "",
+      "surface_type": null
+    },
+    {
+      "key": "mqi_weight.bridge_tunnel",
+      "kind": "component_weight",
+      "status": "fixture",
+      "values": {
+        "weight": 20.0
+      },
+      "unit": "MQI 分项权重（桥梁隧道）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 E-3",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/m4-fixture-asphalt.json",
+          "note": "夹具值，禁止进入 data/ 与内置规则集"
+        }
+      ],
+      "register_ref": "tests/fixtures/m4-fixture-asphalt.json",
+      "note": "",
+      "surface_type": null
+    },
+    {
+      "key": "mqi_weight.appurtenances",
+      "kind": "component_weight",
+      "status": "fixture",
+      "values": {
+        "weight": 10.0
+      },
+      "unit": "MQI 分项权重（沿线设施）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 E-4",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/m4-fixture-asphalt.json",
+          "note": "夹具值，禁止进入 data/ 与内置规则集"
+        }
+      ],
+      "register_ref": "tests/fixtures/m4-fixture-asphalt.json",
+      "note": "",
+      "surface_type": null
+    },
+    {
+      "key": "grade_threshold.mqi",
+      "kind": "grade_threshold",
+      "status": "fixture",
+      "values": {
+        "boundary": "lower_inclusive",
+        "bands": [
+          {
+            "grade": "优",
+            "min": 91.5
+          },
+          {
+            "grade": "良",
+            "min": 79.25
+          },
+          {
+            "grade": "中",
+            "min": 64.5
+          },
+          {
+            "grade": "次",
+            "min": 48.75
+          },
+          {
+            "grade": "差",
+            "min": 0.0
+          }
+        ]
+      },
+      "unit": "分级阈值（五档下界，含界口径由 boundary 登记）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具表 D-3",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/m4-fixture-asphalt.json",
+          "note": "夹具值，禁止进入 data/ 与内置规则集"
+        }
+      ],
+      "register_ref": "tests/fixtures/m4-fixture-asphalt.json",
+      "note": "含界与否由 boundary 显式登记，引擎不猜",
+      "surface_type": null
+    },
+    {
+      "key": "action_rule.maintenance_trigger",
+      "kind": "action_rule",
+      "status": "fixture",
+      "values": {
+        "rules": [
+          {
+            "rule_id": "FX-1",
+            "metric": "pci",
+            "op": "lt",
+            "threshold": 40.0,
+            "action_class": "夹具工程类别甲",
+            "scale_band": "夹具规模档一",
+            "scale_band_value": 3.0
+          },
+          {
+            "rule_id": "FX-2",
+            "metric": "pci",
+            "op": "between",
+            "threshold": {
+              "lo": 40.0,
+              "hi": 70.0
+            },
+            "action_class": "夹具工程类别乙",
+            "scale_band": "夹具规模档二",
+            "scale_band_value": 2.0
+          },
+          {
+            "rule_id": "FX-3",
+            "metric": "pci",
+            "op": "ge",
+            "threshold": 70.0,
+            "action_class": "夹具工程类别丙",
+            "scale_band": "夹具规模档三",
+            "scale_band_value": 1.0
+          }
+        ]
+      },
+      "unit": "对策规则（指标区间→工程类别与规模档）",
+      "basis": [
+        {
+          "standard_id": "fixture",
+          "status": "fixture",
+          "clause": "夹具式 F-1",
+          "channel": "tests/fixtures",
+          "verified_at": "夹具",
+          "locator": "tests/fixtures/m4-fixture-asphalt.json",
+          "note": "夹具值，禁止进入 data/ 与内置规则集"
+        }
+      ],
+      "register_ref": "tests/fixtures/m4-fixture-asphalt.json",
+      "note": "规则按登记顺序逐条判定，第一条命中即定案；类别词汇是夹具词，不是规范词",
+      "surface_type": null
+    }
+  ]
+}

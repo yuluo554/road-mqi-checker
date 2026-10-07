@@ -15,6 +15,8 @@ from road_mqi_checker.ruleset import loader
 FIXTURE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
 ASPHALT_FIXTURE = "pci-fixture-asphalt.json"
 CEMENT_FIXTURE = "pci-fixture-cement.json"
+#: M4 夹具包：沥青六格 + MQI 四分项权重 + MQI 分级 + 对策规则链（全部夹具数）
+M4_FIXTURE = "m4-fixture-asphalt.json"
 
 
 def fixture_ruleset(name):
@@ -27,6 +29,10 @@ def asphalt_ruleset():
 
 def cement_ruleset():
     return fixture_ruleset(CEMENT_FIXTURE)
+
+
+def m4_ruleset():
+    return fixture_ruleset(M4_FIXTURE)
 
 
 def patched_ruleset(name, mutate):
@@ -75,55 +81,6 @@ def mutate_value(key, field, value):
                 coef["values"][field] = copy.deepcopy(value)
 
     return _mutate
-
-
-def append_coefficients(*coefficients):
-    """往夹具包里再补几格（测试 M4 支配格时用来把系数门打开，让"引擎未就位"这一档露出来）。"""
-
-    def _mutate(payload):
-        payload["coefficients"].extend(copy.deepcopy(list(coefficients)))
-
-    return _mutate
-
-
-def mqi_and_action_cells():
-    """`mqi_partial_truth` / `recommended_action_truth` 两列的支配格（M4 才用得着）。"""
-    return (
-        {
-            "key": "mqi_weight.pavement",
-            "kind": "component_weight",
-            "status": "fixture",
-            "values": {"weight": 100.0},
-            "basis": [
-                {
-                    "standard_id": "fixture",
-                    "status": "fixture",
-                    "clause": "夹具式 E-1",
-                    "channel": "tests/fixtures",
-                    "verified_at": "夹具",
-                    "locator": "tests/fixtures/pci-fixture-asphalt.json",
-                }
-            ],
-            "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
-        },
-        {
-            "key": "action_rule.maintenance_trigger",
-            "kind": "action_rule",
-            "status": "fixture",
-            "values": {"trigger": "pci_lt_60"},
-            "basis": [
-                {
-                    "standard_id": "fixture",
-                    "status": "fixture",
-                    "clause": "夹具式 F-1",
-                    "channel": "tests/fixtures",
-                    "verified_at": "夹具",
-                    "locator": "tests/fixtures/pci-fixture-asphalt.json",
-                }
-            ],
-            "register_ref": "tests/fixtures/pci-fixture-asphalt.json",
-        },
-    )
 
 
 #: 黄金用例的破损行：(类型, 程度, 数量, 量纲, 原始文件行号)

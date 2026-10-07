@@ -314,17 +314,62 @@ def test_truth_columns_are_numeric_and_match_the_ledger_path(data_dir, tmp_path)
     assert compared >= 10, "只比对了 %d 个沥青对象，样本不足以证明接线" % compared
 
 
-def test_mqi_and_action_truth_columns_stay_pending_until_m4(tmp_path):
-    """系数门过了、但所属模块还是占位符：这两列如实点名 mqi.engine@M4 / strategy.rules@M4。"""
-    ruleset = sup.patched_ruleset(sup.ASPHALT_FIXTURE, sup.append_coefficients(*sup.mqi_and_action_cells()))
-    for coef in sup.mqi_and_action_cells():
-        assert ruleset.find(coef["key"]).computable
+def test_mqi_and_action_truth_columns_emit_numbers_under_the_m4_fixture(tmp_path):
+    """M4 接线（正证）：汇总四格必需格齐了 → 这两列由 mqi.engine / strategy.rules 算出值。
+
+    同一次生成里 pci 有数、mqi 却拒算是假账，所以断言 mqi 与 pci 逐字段自洽
+    （首期只有路面分项，单分项加权后必等于 PCI 本身）。
+    """
+    ruleset = sup.m4_ruleset()
     out = str(tmp_path / "raw")
     generator.generate(out, ruleset=ruleset, force=True)
     rows = importer.read_table(os.path.join(str(tmp_path), "truth", generator.truth_file_name("S99", 2022)))
+    assert rows
+    counted = 0
     for row in rows:
-        assert row["mqi_partial_truth"] == generator.PENDING_ENGINE_PREFIX + "mqi.engine@M4"
-        assert row["recommended_action_truth"] == generator.PENDING_ENGINE_PREFIX + "strategy.rules@M4"
+        mqi_value = row["mqi_partial_truth"]
+        action_value = row["recommended_action_truth"]
+        if row["pci_truth"].startswith(generator.PENDING_ENGINE_PREFIX):
+            assert mqi_value == generator.PENDING_ENGINE_PREFIX + "pci.engine.blocked"
+            assert action_value == generator.PENDING_ENGINE_PREFIX + "pci.engine.blocked"
+            continue
+        assert not mqi_value.startswith(generator.PENDING_COEFF_PREFIX), mqi_value
+        assert not action_value.startswith(generator.PENDING_ENGINE_PREFIX), action_value
+        assert float(mqi_value) == pytest.approx(float(row["pci_truth"])), (row["segment_id"], mqi_value)
+        assert action_value in _fixture_action_classes(ruleset), (row["segment_id"], action_value)
+        counted += 1
+    assert counted >= 3, "S99-2022 里出数的对象只有 %d 个，样本不足以证明接线" % counted
+
+
+def test_mqi_and_action_truth_columns_still_token_when_required_cells_missing(tmp_path):
+    """M4 接线（反证）：汇总列的必需格缺一格就仍写点名 key 的令牌，对策列同理。
+
+    这条替代 M2 时代"模块还是占位符"那档 —— 占位符档已随 M4 交付消失，
+    但"必需格未齐 ⇒ 不出数"这条判据必须继续有门（§9 第 23 条）。
+    """
+    no_grade = sup.patched_ruleset(sup.M4_FIXTURE, sup.drop_coefficient("grade_threshold.mqi"))
+    out = str(tmp_path / "raw")
+    generator.generate(out, ruleset=no_grade, force=True)
+    rows = importer.read_table(os.path.join(str(tmp_path), "truth", generator.truth_file_name("S99", 2022)))
+    for row in rows:
+        token = row["mqi_partial_truth"]
+        assert token.startswith(generator.PENDING_COEFF_PREFIX), token
+        # 令牌只点名"还没生效的那几格"，已生效的不得混在里面（否则核对队列无法收敛）
+        assert token == generator.PENDING_COEFF_PREFIX + "grade_threshold.mqi(未登记)", token
+
+    no_action = sup.patched_ruleset(sup.M4_FIXTURE, sup.drop_coefficient("action_rule.maintenance_trigger"))
+    out2 = str(tmp_path / "raw2")
+    generator.generate(out2, ruleset=no_action, force=True)
+    rows2 = importer.read_table(os.path.join(str(tmp_path), "truth", generator.truth_file_name("S99", 2022)))
+    for row in rows2:
+        assert row["recommended_action_truth"] == generator.PENDING_COEFF_PREFIX + "action_rule.maintenance_trigger(未登记)"
+        # 汇总列不受对策格影响：该出数的仍出数
+        assert not row["mqi_partial_truth"].startswith(generator.PENDING_COEFF_PREFIX), row["mqi_partial_truth"]
+
+
+def _fixture_action_classes(ruleset):
+    coef = ruleset.find("action_rule.maintenance_trigger")
+    return set(str(rule["action_class"]) for rule in coef.values["rules"])
 
 
 def test_cement_truth_stays_pending_under_the_asphalt_fixture(tmp_path):

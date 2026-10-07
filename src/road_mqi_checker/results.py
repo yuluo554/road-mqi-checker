@@ -217,6 +217,7 @@ class CompareResult(_BaseResult):
         grade_from=None,
         grade_to=None,
         top_contributors=None,
+        comparability_reason="",
     ):
         self.segment_id = segment_id
         self.route_id = route_id
@@ -231,10 +232,14 @@ class CompareResult(_BaseResult):
         self.grade_from = grade_from
         self.grade_to = grade_to
         self.top_contributors = top_contributors if top_contributors is not None else []  # type: List[DeductContribution]
+        #: 不可比因素代码（取值见 `strategy.compare.UNCOMPARABLE_REASONS`，与 COMPARE_COLUMNS 同列）
+        self.comparability_reason = comparability_reason
 
     def check_contract(self):
         # type: () -> None
         super(CompareResult, self).check_contract()
+        if self.status == STATUS_UNCOMPARABLE and not self.comparability_reason:
+            raise ContractViolation("uncomparable 必须给出不可比因素代码，否则清单里无法归类")
         if self.status == STATUS_OK and not self.top_contributors:
             raise ContractViolation("对比结论必须能回答由哪个指标的哪次变化触发（top_contributors 为空）")
 
@@ -242,6 +247,10 @@ class CompareResult(_BaseResult):
 class ActionSuggestion(_BaseResult):
     NUMERIC_FIELDS = ("scale_band_value",)
     LABEL_FIELDS = ("action_class",)
+
+    #: 从评定/汇总结果**复制**过来的上下文（是事实转述，不是本对象的新结论，
+    #: 因此不进 NUMERIC_FIELDS：对策 blocked 时 PCI 仍是一个已核对口径下的事实数字）
+    CONTEXT_FIELDS = ("pci", "mqi_partial", "start_stake_m")
 
     def __init__(
         self,
@@ -259,6 +268,9 @@ class ActionSuggestion(_BaseResult):
         scale_band_value=None,
         triggered_by=None,
         rank_key="",
+        pci=None,
+        mqi_partial=None,
+        start_stake_m=None,
     ):
         self.segment_id = segment_id
         self.route_id = route_id
@@ -274,6 +286,9 @@ class ActionSuggestion(_BaseResult):
         self.scale_band_value = scale_band_value
         self.triggered_by = triggered_by
         self.rank_key = rank_key
+        self.pci = pci
+        self.mqi_partial = mqi_partial
+        self.start_stake_m = start_stake_m
 
     def check_contract(self):
         # type: () -> None
