@@ -688,6 +688,23 @@ def ruleset_pending_keys(ruleset, templates, surface_type):
     return sorted(pending)
 
 
+def scoring_gate_pending_keys(ruleset):
+    # type: (object) -> List[str]
+    """真值评分两列能否出数：两种路面的必需格全部生效才行，返回仍未生效的 key。
+
+    判据必须是"必需格"而不是"生效格总数"：M3 会让用户自定的容差格先生效，
+    届时生效 1 格但评定路径一格都凑不齐 —— 按总格数说话就等于对外宣称"评分列有数"，
+    而真值两列实际仍是 pending 令牌。与 `_score_truth` 用同一个 `ruleset_pending_keys`。
+    """
+    templates = TRUTH_GOVERNING_KEYS["pci_truth"] + TRUTH_GOVERNING_KEYS["grade_truth"]
+    pending = []  # type: List[str]
+    for surface_type in models.SURFACE_TYPES:
+        for key in ruleset_pending_keys(ruleset, templates, surface_type):
+            if key not in pending:
+                pending.append(key)
+    return sorted(pending)
+
+
 def _score_truth(surface_type, ruleset, probe_input):
     # type: (str, object, Dict[str, object]) -> Dict[str, str]
     """真值四列：先过系数门，未核对一律出 pending 令牌（未核对不出数，真值也不出数）。"""
@@ -1031,6 +1048,7 @@ def generate(out_dir, seed=DEFAULT_SEED, routes=DEFAULT_ROUTES, years=DEFAULT_YE
             totals["truth_rows"] += len(truth_rows)
 
     summary = ruleset.summary()
+    scoring_pending = scoring_gate_pending_keys(ruleset)
     manifest = {
         "data_class": FILE_MARK_VALUE,
         "dictionary_version": DICTIONARY_VERSION,
@@ -1045,7 +1063,13 @@ def generate(out_dir, seed=DEFAULT_SEED, routes=DEFAULT_ROUTES, years=DEFAULT_YE
             "ruleset_id": summary["ruleset_id"],
             "active": summary["computable"],
             "blocked": summary["blocked"],
-            "truth_note": "生效系数 0 格时真值四列一律为 pending 令牌：未核对不出数",
+            "truth_note": (
+                "真值评分两列的必需系数已全部生效 → 两列由评定引擎算出数值。"
+                if not scoring_pending
+                else "真值评分两列的必需系数仍有 %d 格未生效（%s）→ 一律为 pending 令牌："
+                     "未核对不出数；本包生效系数 %d 格不等于评分列可出数。"
+                     % (len(scoring_pending), "、".join(scoring_pending), summary["computable"])
+            ),
         },
     }
     assert sorted(manifest) == sorted(MANIFEST_TOP_LEVEL_KEYS), "manifest 顶层键与 plan/03 登记的格式不一致"

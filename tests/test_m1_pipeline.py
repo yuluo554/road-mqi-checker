@@ -441,15 +441,55 @@ def test_value_range_stays_undetermined_when_bounds_are_unknown(ledger):
     assert all(f.verdict == checks.VERDICT_UNDETERMINED for f in findings), [f.detail for f in findings]
 
 
-# ---- 闭合差：判据依赖 pending 系数，只报差值不硬判 ----
+# ---- 闭合差：判据依赖容差这一格系数；M3 起该格已显式登记，判与不判都要有证据 ----
 
 
-def test_length_closure_never_hard_judges_while_pending(full_ledger):
-    _conn, _receipts, findings = full_ledger
+def _tolerance_pending_ruleset(tmp_path):
+    """把内置包的容差格退回 pending，用来继续守住"未核对只报差值不判定"这条门。"""
+    src = os.path.join(ruleset_loader._BUILTIN_DIR, "base-jtg5210-2018.json")
+    with open(src, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    for coef in payload["coefficients"]:
+        if coef["key"] == "tolerance.length_closure":
+            coef["status"] = "pending"
+            coef["values"] = None
+            coef["basis"][0].update({"status": "pending", "clause": "", "channel": "", "verified_at": "", "locator": ""})
+    path = os.path.join(str(tmp_path), "tolerance-pending.json")
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+    return ruleset_loader.load_file(path)
+
+
+def test_length_closure_never_hard_judges_while_tolerance_pending(tmp_path):
+    """容差退回 pending → 同一批数据只能出"未判定"，且差值仍然报得出来。"""
+    ruleset = _tolerance_pending_ruleset(tmp_path)
+    conn = db.connect(":memory:")
+    db.initialize(conn)
+    checks.reset_ruleset_cache()
+    try:
+        _import_all(conn)
+        findings = []
+        for year in generator.plan_years():
+            findings.extend(checks.run_all_checks(conn, year, ruleset))
+    finally:
+        conn.close()
+        checks.reset_ruleset_cache()
     closure = [f for f in findings if f.kind == "length_closure"]
     assert closure, "闭合差校验项没有输出"
     assert all(f.verdict == checks.VERDICT_UNDETERMINED for f in closure), [f.detail for f in closure]
     assert all("未判定" in f.detail and "闭合差" in f.detail for f in closure)
+    # 差值本身要看得见：4 个非零闭合差一个都不能少（只是不判定）
+    assert len(closure) == 4, [f.detail for f in closure]
+
+
+def test_length_closure_is_judged_under_the_registered_builtin_tolerance(full_ledger):
+    """M3 之后内置包容差已生效 → 同一判据真的在判：4 个非零闭合差全部转为检出，无一条未判定。"""
+    _conn, _receipts, findings = full_ledger
+    closure = [f for f in findings if f.kind == "length_closure"]
+    assert len(closure) == 4, [f.detail for f in closure]
+    assert all(f.verdict == checks.VERDICT_FOUND for f in closure), [f.detail for f in closure]
+    assert all("超出已核对容差" in f.detail for f in closure), [f.detail for f in closure]
+    assert not any("未判定" in f.detail for f in closure)
 
 
 def test_zero_closure_is_not_reported(ledger):
@@ -550,7 +590,7 @@ def test_partition_change_is_marked_uncomparable_without_reallocation(full_ledge
         assert not re.search(r"\d+(\.\d+)?\s*%", row["detail"]), "不可比里不该出现摊分比例：%s" % row["detail"]
 
 
-def test_run_all_checks_summary_covers_both_verdicts(full_ledger):
+def test_run_all_checks_summary_after_tolerance_is_registered(full_ledger):
     _conn, _receipts, findings = full_ledger
     summary = checks.summarize(findings)
     assert summary["total"] == len(findings)
@@ -559,7 +599,9 @@ def test_run_all_checks_summary_covers_both_verdicts(full_ledger):
         len(cases) for cases in EXPECTED_TRANSITIONS.values()
     )
     nonzero_closure_cells = 4  # 两个悬空 + 两个重叠格子的长度和与里程不等
-    assert summary["undetermined"] == nonzero_closure_cells, summary
+    # M3 起内置包容差已显式登记 → 这 4 格从"未判定"转为检出，四年度全量校验不再留未判定项
+    assert summary["undetermined"] == 0, summary
+    assert summary["by_kind"]["length_closure"][checks.VERDICT_FOUND] == nonzero_closure_cells, summary
 
 
 # ---- CLI 接通 ----

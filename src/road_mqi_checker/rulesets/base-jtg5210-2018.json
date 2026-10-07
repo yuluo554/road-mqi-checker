@@ -2,13 +2,13 @@
   "schema_version": 1,
   "ruleset_id": "base-jtg5210-2018",
   "version": "0.0.0-draft",
-  "title": "JTG 5210-2018 口径基础规则集（骨架期：全部系数待核对）",
+  "title": "JTG 5210-2018 口径基础规则集（M3 轮：规范来源 14 格待核对，用户自定容差 1 格已登记）",
   "applies_to": {
     "province": "*",
     "year": "*",
     "surface_type": "*"
   },
-  "notes": "M0 骨架状态：本包只声明评定路径需要哪些格子（key），所有 status=pending、values=null。依据官方原文逐格核对后，把 status 改 verified 并补 clause/channel/verified_at/locator，才允许进入计算。任何凭记忆填的数值都是错误，不允许出现在本文件。",
+  "notes": "M3 轮查证结论：本包声明评定路径需要的 15 格系数。凡依据 JTG 5210-2018 的 14 格仍为 status=pending、values=null —— 官方渠道取不到能定位条款号与表号的原文（只有公告，公告无数值表），逐渠道记录见 data/README.md §一 第 1 行与 plan/04。唯一生效的是 tolerance.length_closure，它不来自规范，属用户自定口径，按 data/README.md §一 第 9 行显式登记。任何凭记忆填的规范数值都是错误，不允许出现在本文件。",
   "coefficients": [
     {
       "key": "deduct_ratio.asphalt_distress",
@@ -308,22 +308,24 @@
       "key": "tolerance.length_closure",
       "kind": "grade_threshold",
       "surface_type": null,
-      "status": "pending",
-      "values": null,
+      "status": "verified",
+      "values": {
+        "meters": 1
+      },
       "unit": "路段长度与路线里程闭合差容差",
       "basis": [
         {
           "standard_id": "user-defined",
-          "status": "pending",
-          "clause": "",
-          "channel": "",
-          "verified_at": "",
-          "locator": "",
-          "note": "非标准条款系数：属用户自定口径，必须在导入回执里显示当前取值与来源"
+          "status": "verified",
+          "clause": "用户自定口径第 1 号：闭合差绝对值 ≤ 1 m 视为不报",
+          "channel": "本项目自定，无外部标准依据（JTG 5210-2018 原文不含该项，见 data/README.md#7）",
+          "verified_at": "2026-10-07",
+          "locator": "plan/04-扣分规则集与条款映射.md §三 用户自定口径登记表",
+          "note": "取 1 m 的理由：桩号按整米登记（K12+300 形态，parse_stake 只产整数米），里程与路段长度都由整米桩号相减得到，故口径一致的账闭合差必为 0；放宽到 1 m 只为吸收路段划分时末段取整的一米差，任何更大的差都是真实的账实不符。非标准条款系数：属用户自定口径，必须在导入回执里显示当前取值与来源"
         }
       ],
-      "register_ref": "data/README.md#7",
-      "note": "用户自定也要显式登记，不允许代码里硬编码默认容差"
+      "register_ref": "data/README.md#9",
+      "note": "用户自定也要显式登记，不允许代码里硬编码默认容差；本格数值不是规范值，改它不需要原文"
     }
   ]
 }

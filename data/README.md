@@ -8,17 +8,23 @@
 
 | # | 依据 | 用于哪条规则 | 状态 | 核对渠道与时间 |
 |---|---|---|---|---|
-| 1 | JTG 5210-2018《公路技术状况评定标准》 | 破损扣分比率、分项指标（RQI/车辙/抗滑等）合成 PCI、MQI 加权、技术状况分级阈值 | ⬜ 编号与名称多源一致，但**未取到交通运输部官方公告原文页** | 2026-10-07 检索命中：百度百科条目、`nssi.org.cn` 标准条目（抓取失败，fetch error）、`guifanku.com`、`kongfz.com` 出版物页 —— 均非官方。**M3 开工前必须换到交通运输部/国家铁路局等官方标准公告页复核，否则相关系数不得生效** |
-| 2 | JTG 5210-2018 的发布公告号与实施日期 | 引用格式与版本对照 | ⬜ | 同上，未取得官方公告页 |
-| 3 | 是否存在替代/修订版（2026 年是否仍现行） | 防止引用废止版本 | ⬜ 待核对（截至 2026-10-07 检索，最新公开引用仍指向 2018 版，未见新版） | 检索含 2026-09 时间戳的条目仍记 2018 版；**属间接证据，需官方现行标准清单确认** |
-| 4 | 《公路养护技术标准》与 JTG 5142-2019 的名称-编号对应关系 | "按评定结果安排养护工程"的养护管理锚点 | ❌ 当前查证失败 → **暂不作为锚点引用** | 冲突记录：交通运输部政策解读页 `mot.gov.cn/2023zhengcejd/202312/t20231206_3963116.html` 返回 404；同时检索到一处把 JTG 5142-2019 记为《公路沥青路面养护技术规范》。名称与编号对应关系未解决前，本题**不得**引用该标准号或名称 |
+| 1 | JTG 5210-2018《公路技术状况评定标准》 | 破损扣分比率、分项指标（RQI/车辙/抗滑等）合成 PCI、MQI 加权、技术状况分级阈值 | ❌ 查证失败（M3 轮）：**官方渠道取不到原文条款表**，相关 14 格系数一律留 `pending` | 2026-10-07 M3 换渠道复核，抓取缓存与 sha1 见 `.tmp_verify/M3/`（batch1/batch2/batch3/province）：① 陕西省交通运输厅 `jtyst.shaanxi.gov.cn/glj/kjxx/201909/t20190927_2661123.html` = HTTP 200 / 61,900 B / sha1 `39d8c5e…`，**是官方页但只转载公告**（发布/施行/废止三件事），**不含任何条款号与数值表**；② 交通运输部 `www.mot.gov.cn` = 200（首页，站内检索 `so.mot.gov.cn` 连接失败 HTTP 000），其标准公告页猜测 URL = 404；③ 全国标准信息公共服务平台 `std.samr.gov.cn` 详情/检索页 = 200 但正文由脚本填充，curl 取到的是空壳（`《》`、字段全空），无条款可定位；④ 主编单位 `rioh.cn`、出版机构 `jtcbs.com.cn` = 连接失败 000；⑤ 全文命中处 `waizi.org.cn` / `nssi.org.cn`（000）/ `guifanku.com`（404）/ `max.book118.com` / `renrendoc.com` / `scribd` / `book.dangdang` 全部是文档分享站或书店，**按纪律不采信其数值**。结论：**扣分比率、分项权重、分级阈值 14 格不得转 verified**，需要纸质或正式电子原文后逐格核对 |
+| 2 | JTG 5210-2018 的发布公告号与实施日期 | 引用格式与版本对照 | ⬜ 部分核对：施行/废止日期已有官方页支撑，**公告号仍只有非官方来源** | 官方页（同上 ①，sha1 `39d8c5e…`）确认"2018-12-25 发布、2019-05-01 施行、原 JTG H20—2007 同时废止、管理与解释权归交通运输部、日常解释由交通运输部公路科学研究院负责"；"交通运输部公告 2018 年第 88 号"这一编号**仅出现在 `waizi.org.cn`（非官方）**，官方页无编号 → 公告号不得写进任何交付面文字 |
+| 3 | 是否存在替代/修订版（2026 年是否仍现行） | 防止引用废止版本 | ⬜ 待核对（间接证据增强，仍无官方现行清单） | 官方页 ①（2019 年陕西省交通运输厅转载）确认 2018 版替代 JTG H20—2007；2026-10-07 检索未见替代新版，`std.samr.gov.cn` 的"现行/废止"状态位因页面脚本渲染未能取得 → **属间接证据，须以官方现行标准清单为准** |
+| 4 | 《公路养护技术标准》与 JTG 5142-2019 的名称-编号对应关系 | "按评定结果安排养护工程"的养护管理锚点 | ❌ 当前查证失败 → **暂不作为锚点引用** | 冲突记录：交通运输部政策解读页 `mot.gov.cn/2023zhengcejd/202312/t20231206_3963116.html` 返回 404；同时检索到一处把 JTG 5142-2019 记为《公路沥青路面养护技术规范》。名称与编号对应关系未解决前，本题**不得**引用该标准号或名称；M3 轮未新增可采信渠道 |
 | 5 | 《公路安全保护条例》《农村公路条例》现行状态与相关条文 | 路况评定与养护义务的上位依据（仅背景引用） | ⬜ | 未查证；不得凭记忆写条号；核对不通过则从 01 文档锚点表删除 |
 | 6 | 《国家公路网规划》/"十四五"综合交通运输体系规划等文件号 | 时代性加分项（不参赛，非硬锚点） | ⬜ | 未查证；核对不过直接删行 |
-| 7 | 各省公路技术状况评定实施细则 / 地方扣分表差异 | versioned ruleset 的"省份包"设计动机 | ⬜ | 待按目标受众省份逐条检索官方页；**未核对者不得进入评定路径**，只能作为用户自定规则 |
+| 7 | 各省公路技术状况评定实施细则 / 地方扣分表差异 | versioned ruleset 的"省份包"设计动机 | ⬜ | 待按目标受众省份逐条检索官方页；**未核对者不得进入评定路径**，只能作为用户自定规则；M3 轮的省级检索结果记在 `plan/04` §四 |
 | 8 | 标准原文中的算例（若有） | 黄金用例真值 | ⬜ | 取得原文后逐格核对再入库；无原文 → 只用自算用例并附推导过程 |
+| 9 | 闭合差容差 = ±1 m（**用户自定口径，非规范值**） | `tolerance.length_closure` → 导入校验 `length_closure` 判与不判 | ✅ 生效（用户自定口径显式登记即生效；**不属于"已核对官方原文"那一档**） | 2026-10-07 显式登记。取 1 m 的理由：桩号按整米登记（`K12+300` 形态，`models.parse_stake` 只产整数米），路段长度与路线里程都由整米相减得到，口径一致的账闭合差必为 0；放宽到 1 m 只为吸收路段划分时末段取整的一米差，更大的差都是真实的账实不符。**本格改它不需要原文**，但必须在导入回执里显示当前取值与来源 |
 
 > 纪律重申：搜索摘要一律不采信（存在编造链接与矛盾条号）。本题风险集中在**每一格数字**上 —— 扣分表与权重若凭记忆填写必然错，所以 M3 之前所有系数字段一律为"待核对"，评定引擎先按"无生效系数"跑通结构。
 > 引用纪律：01 文档中不出现任何具体阈值/权重数字，一律写"以原文核对后入库"。
+>
+> **M3 轮结论（2026-10-07）**：换了官方渠道再查一次，仍然**取不到能定位条款号与表号的 JTG 5210-2018 原文**
+> （官方页只有公告，标准平台正文靠脚本渲染，出版社与主编单位站点连不上，全文命中处全是文档分享站）。
+> 于是 14 格规范来源系数**继续留 `pending`**，交付面评定路径仍不出数；唯一转生效的是**不依赖原文的用户自定容差格**（本表第 9 行）。
+> 逐格映射与已查渠道清单见 `plan/04-扣分规则集与条款映射.md`；抓取缓存与 manifest（URL + HTTP 码 + 字节数 + sha1）留在 `.tmp_verify/M3/`，收尾不删。
 
 ## 二、开源空白查证记录（2026-10-07，`gh search repos`）
 
@@ -54,8 +60,11 @@ injected_issue, injected_field
 
 - `surface_type ∈ {asphalt, cement}`；破损类型与程度字典见 `plan/03` §二（代码落点 `ledger/models.py`）；
 - `injected_issue ∈ {gap_chain, overlap_chain, partition_change, negative_value, out_of_range, unit_error, duplicate_import, none}`；
-- **评分四列现在仍一律是 `pending:coeff=<系数key>` 令牌**：内置规则集 15 格系数全为待核对，
+- **评分四列现在仍一律是 `pending:coeff=<系数key>` 令牌**：M3 轮官方原文仍未取到，内置包 15 格里
+  生效的只有"用户自定闭合差容差"那一格，评定路径必需的六格（两种路面合计 8 个 key）全为待核对，
   "未核对不出数"对真值同样成立。真值里凭记忆填一个 PCI 等于给基准装假答案。
+  **生效格数 ≠ 评分列可出数**：`bench generate` 的说明行与 `data/raw/manifest.json` 的 `truth_note`
+  都按"必需格是否全部生效"说话，不拿"生效系数 1 格"当成绩。
   数值真值的唯一入口是 `generator._numeric_truth_probe`，**M2 起它调用评定引擎本身**
   （`pci.engine.compute_pci`，与 `rmqc assess` 同一个内核），生成器里没有第二套扣分公式。
   于是同一 seed 重跑：换上一套系数已核对的规则集包，`pci_truth` / `grade_truth` 两列自动变数值或等级名，
@@ -117,6 +126,9 @@ data/
 | 白名单形式 | `privacy.py` 的 `PATTERNS` + `WHITELIST_HINTS` | `tests/test_privacy_whitelist.py`、`test_committed_data_identifiers_all_pass_the_whitelist` |
 | 数据类别（SYNTHETIC / user） | `ledger/importer.py` 的 `DATA_CLASSES` + 文件首行标记 | `test_unmarked_file_refuses_without_declaration`、`test_mark_conflicting_with_declaration_is_refused` |
 | 固定随机种子 | `bench/rng.py` splitmix64 + 冻结向量 | `tests/test_determinism_rng.py`、`test_injections_are_seed_independent` |
-| 未核对不进评定路径 | `results.py` 拒算契约 + `pci.engine` 系数门 + `cli` 系数门 + `checks` 的 `undetermined` 档 | `tests/test_results_contract.py`、`test_length_closure_never_hard_judges_while_pending`、`test_builtin_ruleset_blocks_every_object_with_numbers_all_empty` |
+| 未核对不进评定路径 | `results.py` 拒算契约 + `pci.engine` 系数门 + `cli` 系数门 + `checks` 的 `undetermined` 档 | `tests/test_results_contract.py`、`test_length_closure_never_hard_judges_while_tolerance_pending`、`test_builtin_ruleset_blocks_every_object_with_numbers_all_empty` |
+| 生效格数 ≠ 可出数（M3 部分解锁后新增） | `bench/generator.py::scoring_gate_pending_keys` + `manifest.coefficient_gate.truth_note` | `test_ruleset_builtin.py::test_blocked_cells_still_cover_the_assessment_path`、`test_m2_assess.py::test_pci_and_cement_fixtures_do_not_leak_into_shipped_paths` |
+| 系数逐格二选一（verified+四件套 / pending+null）+ 官方渠道判据 + 生效格形状契约 | `ruleset/loader.py` schema 门 + `tests/test_ruleset_builtin.py::values_shape_problems` | `test_every_cell_is_verified_with_provenance_or_pending_without_numbers`、`test_only_user_defined_cells_are_verified`、`test_verified_cells_satisfy_the_shape_contract`、`test_shape_contract_rejects_bad_values`（8 个坏形状反例）、`test_provenance_gate_rejects_a_verified_cell_without_locator` |
+| 容差生效后闭合差真的判（用户自定口径第 1 号） | `ledger/checks.py::check_length_closure` + `rulesets/*.json` 的 `tolerance.length_closure` | `test_length_closure_is_judged_under_the_registered_builtin_tolerance`、`test_run_all_checks_summary_after_tolerance_is_registered`（与上面那条 pending 版门互为双向证据） |
 | 破损字典（类型×程度×量纲） | `ledger/models.py` 的 `DISTRESS_DICTIONARY`（口径见 `plan/03` §二） | `test_distress_dictionary_is_clean_in_frozen_data_but_catches_intruders` |
 | 演示数据入仓形态 | `data/raw/*.csv` + `data/truth/*.truth.csv` + `data/raw/manifest.json` | `test_regeneration_of_committed_fixtures_is_byte_identical`、`test_manifest_digests_match_committed_fixtures` |

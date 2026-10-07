@@ -63,7 +63,15 @@ def test_selfcheck_json_shape_is_stable(run_cli):
     payload = json.loads(out)
     for key in ("rulesets", "coefficient_gate", "ledger_schema", "placeholders", "gui_pages", "failures"):
         assert key in payload, key
-    assert payload["coefficient_gate"]["open"] is False  # M0 常态：无生效系数
+    # 系数门按"有无生效系数"说话，数值必须与内置包自身一致（不写死 0，也不写死 1）
+    from road_mqi_checker.ruleset import loader
+
+    builtin = loader.load_file(os.path.join(loader._BUILTIN_DIR, "base-jtg5210-2018.json"))
+    gate = payload["coefficient_gate"]
+    assert gate["active"] == len(builtin.computable_coefficients())
+    assert gate["blocked"] == len(builtin.blocked_coefficients())
+    assert gate["active"] + gate["blocked"] == len(builtin.coefficients)
+    assert gate["open"] is (gate["active"] > 0)
     assert payload["ledger_schema"]["ok"] is True
 
 
@@ -129,11 +137,24 @@ def test_ruleset_list_and_show(run_cli):
     assert rc == EXIT_OK and "pending" in out
 
 
-def test_ruleset_show_json_marks_every_cell_uncomputable(run_cli):
+def test_ruleset_show_json_reports_per_cell_computability(run_cli):
+    """逐格 computable 标记必须与包内状态一致：规范来源格未拿到原文前一律 False。"""
     rc, out, _err = run_cli(["--json", "ruleset", "show"])
     assert rc == EXIT_OK
     rows = json.loads(out)["coefficients"]
-    assert rows and all(row["computable"] is False for row in rows)
+    assert rows
+    from road_mqi_checker.ruleset import loader
+
+    builtin = loader.load_file(os.path.join(loader._BUILTIN_DIR, "base-jtg5210-2018.json"))
+    by_key = {coef.key: coef for coef in builtin.coefficients}
+    for row in rows:
+        assert row["computable"] is by_key[row["key"]].computable, row["key"]
+    standard_cells = [
+        row["key"] for row in rows if by_key[row["key"]].basis[0].standard_id.startswith("JTG")
+    ]
+    assert standard_cells and all(not by_key[key].computable for key in standard_cells), (
+        "有规范来源格在未见原文的情况下生效：%s" % standard_cells
+    )
 
 
 def test_ledger_tables_listing(run_cli):

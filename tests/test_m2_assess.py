@@ -375,7 +375,14 @@ def test_pci_and_cement_fixtures_do_not_leak_into_shipped_paths(repo_root):
     from road_mqi_checker.ruleset import loader
 
     builtin = loader.load_file(os.path.join(loader._BUILTIN_DIR, "base-jtg5210-2018.json"))
-    assert builtin.computable_coefficients() == []
+    from road_mqi_checker.bench import generator
+
+    assert generator.scoring_gate_pending_keys(builtin), (
+        "内置包的评定必需一格都没生效，评分通路不该有任何数字"
+    )
+    for coef in builtin.coefficients:
+        if coef.basis[0].standard_id.startswith("JTG"):
+            assert coef.computable is False, coef.key
     for name in ("pci-fixture-asphalt.json", "pci-fixture-cement.json"):
         with pytest.raises(Exception):
             loader.load_file(os.path.join(sup.FIXTURE_DIR, name), allow_fixture=False)

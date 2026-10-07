@@ -260,6 +260,7 @@ def cmd_bench(args):
             raise InputUnavailable("seed 必须是非负整数，收到 %d" % seed)
         out_dir = args.out if args.out else os.path.join(find_data_dir(start=os.getcwd()), "raw")
         result = generator.generate(out_dir, seed=seed, force=args.force)
+        scoring_pending = generator.scoring_gate_pending_keys(ruleset_loader.select_ruleset())
         totals = result["totals"]
         payload = dict(result)
         payload["seed"] = seed
@@ -274,9 +275,15 @@ def cmd_bench(args):
             "干净对照格子：" + ", ".join(totals["clean_cells"]),
             "真值四列："
             + (
-                "一律为 pending 令牌（生效系数 0 格，未核对不出数）。"
-                if ruleset_loader.select_ruleset().summary()["computable"] == 0
-                else "评分列由评定引擎算出数值；引擎拒算的对象仍写 pending 令牌。"
+                "评分列由评定引擎算出数值；引擎拒算的对象仍写 pending 令牌。"
+                if not scoring_pending
+                else "评分列仍为 pending 令牌（必需系数还缺 %d 格：%s）—— "
+                     "本包生效系数 %d 格，但未核对不进评定路径。"
+                     % (
+                         len(scoring_pending),
+                         "、".join(scoring_pending),
+                         ruleset_loader.select_ruleset().summary()["computable"],
+                     )
             ),
         ]
         _print(payload, args.as_json, lines=lines)
