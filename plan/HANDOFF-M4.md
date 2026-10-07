@@ -53,8 +53,13 @@
 
 - **查证（数据活）**：换 6 类渠道复核 JTG 5210-2018，**结论是官方原文不可得**；
   14 格规范来源系数继续 pending 并逐渠道记档，抓取缓存 + manifest 留 `.tmp_verify/M3/`；
-  省级差异单独一批检索（11 路，含 5 个省厅站点与标准平台地方库），结论"未检索到可采信的省级差异条款表"，
-  不编造省份包；
+  省级差异一批检索（留档 69 条 manifest + 58 份 raw + 31 份 txt，约 31 MB）：**拿到两部省级地标的官方全文**
+  （国标委地方标准备案平台 `dbba.sacinfo.org.cn`：安徽 `DB34/T 4471-2023` 详情页 + 713 KB 全文 PDF、
+  湖南 `DB43/T 3087-2024` 扫描全文）⇒ **结论与 M0–M2 的假设相反**：省级差异确实存在，
+  但发生在"农村公路/四级及以下"这一档 —— 安徽原文逐字"二级及以上的公路按照 JTG 5210 的规定执行"，
+  且 DB 自设一套指标体系（幂函数 PCI、自有权重、90/80/70/60 边界、保留 2 位小数），**不是改 JTG 的表**；
+  未检索到任何省级文件改动 JTG 在高速/国省干线的比率、权重或分级 ⇒ 14 格继续 pending，仍不建省份包。
+  同时定位到**官方行业标准库 `jtst.mot.gov.cn`（本轮 503，URL 形态已定位）**；
 - **唯一生效格**：`tolerance.length_closure = 1 m`（用户自定口径第 1 号），
   四件套齐全 + `register_ref` 改指台账第 9 行（原来指第 7 行"省级差异"，指错了）；
 - **代码（一个真 bug）**：`bench/generator.py` 新增 `scoring_gate_pending_keys()`，
@@ -101,7 +106,15 @@
    由 `privacy.assert_honest_wording` 在导出路径拦住。
 9. **干净环境验证（本棒做一次）**：`bash .tmp_verify/M3/clean_verify.sh`（把 `WORK`/批次目录换成
    `_m4`），逐条退出码留档；**收尾提交先 commit 再 clone**。
-10. 写 `plan/HANDOFF-M5.md`。
+10. （可选，成本低）**重试 `jtst.mot.gov.cn` 行业标准详情页** —— 若通了，先只登记"现行/废止"状态与
+    条款号（转 `located`，`values` 仍为 null），把 14 格从"一无所知"推进到"知道该翻哪张表"；
+    数值仍要拿到正文才转 `verified`。
+11. **`applies_to` 缺一个维度**（M3 省级原文暴露的缺口）：现有 `province / year / surface_type` 三元组
+    无法表达"二级及以上用 JTG、四级及以下用 DB"这种切换，因为切换条件是**技术等级**。
+    台账里 `tech_grade` 字段已有（`models.RAW_COLUMNS`），但规则包侧没有对应维度。
+    → 若 M4/M6 要做省份包，先补这一维（属结构变更，要按 §三 第 9 条在 `plan/02` §9 登记并同步夹具）；
+    若不做，就在 `plan/04` §五 保留这条缺口记录，不要静默忽略。
+12. 写 `plan/HANDOFF-M5.md`。
 
 ## 三、既定口径（动了会打挂基准，改动前先在 plan/02 §9 登记）
 
@@ -133,9 +146,11 @@ M0–M3 累计口径见 `plan/02` §9 第 1–24 条。M4 特别相关：
 - `rmqc` 控制台脚本在非 UTF-8 控制台输出 GBK 字节：抓 JSON 前 `export PYTHONIOENCODING=utf-8`
   （README「已知环境问题」已记）；
 - 验证脚本自身也要绝对路径（§〇 教训 8）；临时产物只写 `.tmp_*/`（已 gitignore，字节门与扫描器跳过）；
-- 官方渠道实测不可达（M3 留档）：`so.mot.gov.cn`、`rioh.cn`、`jtcbs.com.cn`、`nssi.org.cn` 连接失败（000），
-  `jtt.hubei.gov.cn` 返回 412（反爬），`std.samr.gov.cn` 页面 200 但正文靠脚本渲染 —— curl 取到空壳。
-  M4 若还要查证，先接受"这些渠道拿不到原文"，别再花一轮重试同一批站点；
+- 官方渠道实测（M3 留档）：`so.mot.gov.cn`、`rioh.cn`、`jtcbs.com.cn`、`nssi.org.cn` 连接失败（000），
+  `jtt.hubei.gov.cn` 412（反爬），`std.samr.gov.cn` 页面 200 但正文靠脚本渲染 —— curl 取到空壳；
+  **例外：`jtst.mot.gov.cn`（交通运输标准化信息服务平台，行业标准库）是 503 而不是"没这东西"**，
+  详情页 URL 形态 `…/hb/search/stdHBDetailed?id=<32 位 hex>` 已定位 → 想推进 14 格系数，
+  **先重试这一个域名（隔几小时或换网络）**，这是成本最低的一步；其余站点别再重复扫一遍；
 - `gh` 2.93.0 已登录，账号 `yuluo554`；仓库当前**无 remote**，M0–M3 只本地 commit；
   建仓与 push 属对外动作，需用户明确授权；
 - 工作树里的 `.qoder-credits/` 未跟踪目录不属于本项目：别 `git add`，也别删。
