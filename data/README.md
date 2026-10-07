@@ -54,11 +54,18 @@ injected_issue, injected_field
 
 - `surface_type ∈ {asphalt, cement}`；破损类型与程度字典见 `plan/03` §二（代码落点 `ledger/models.py`）；
 - `injected_issue ∈ {gap_chain, overlap_chain, partition_change, negative_value, out_of_range, unit_error, duplicate_import, none}`；
-- **评分四列现在一律是 `pending:coeff=<系数key>` 令牌**：内置规则集 15 格系数全为待核对，
+- **评分四列现在仍一律是 `pending:coeff=<系数key>` 令牌**：内置规则集 15 格系数全为待核对，
   "未核对不出数"对真值同样成立。真值里凭记忆填一个 PCI 等于给基准装假答案。
-  数值真值的唯一入口是 `generator._numeric_truth_probe` —— 系数核对完（M3）且评定引擎就位（M2）后，
-  同一 seed 重跑这四列自动变成数值，且数值**来自评定引擎本身**，不在生成器里另写一套扣分公式，
-  保证"数据错→检出"和"分数算得对"两类真值同源可复算；
+  数值真值的唯一入口是 `generator._numeric_truth_probe`，**M2 起它调用评定引擎本身**
+  （`pci.engine.compute_pci`，与 `rmqc assess` 同一个内核），生成器里没有第二套扣分公式。
+  于是同一 seed 重跑：换上一套系数已核对的规则集包，`pci_truth` / `grade_truth` 两列自动变数值或等级名，
+  且与台账通路逐字段相同（`tests/test_m2_assess.py` 逐个对象对账）。
+  剩下两列 `mqi_partial_truth` / `recommended_action_truth` 属 M4，仍写 `pending:engine=mqi.engine@M4` /
+  `pending:engine=strategy.rules@M4`（如实点名所属模块与里程碑，不放一个凑出来的数）。
+  系数齐了但评定引擎对该对象拒算（台账含异常行）时，这两列写 `pending:engine=pci.engine.blocked` ——
+  **引擎拒算的对象真值也不出数**，两边口径一致；
+- 真值取的是**即将落盘的那份 CSV 的文本值**，并按导入层 `R008` 的同一身份列去掉文件内重复行：
+  真值描述"进了台账的那本账"，与评定通路的输入是同一份数据（`plan/02` §9 第 21 条）；
 - 注入用例是声明的常量（`generator.INJECTIONS` / `PARTITION_PLAN`），不随 seed 漂移；
   同一注入隐含的其余结论见 `generator.INJECTION_IMPLICATIONS`，不在真值里手工再写一份；
 - 生成器必须支持固定随机种子（基准可复现的前提），随机源只能是 `src/road_mqi_checker/bench/rng.py` 的 splitmix64。
@@ -95,18 +102,21 @@ data/
 `data/standards/*.pdf` 已在 `.gitignore` 中排除，避免版权风险；`data/raw/real_*` 亦排除，
 真实检测数据不得进仓库。会话内查证与验证的临时产物只落 `.tmp_*/`（已被忽略且字节门跳过）。
 
-## 五、落地对照（截至 M1，2026-10-07）
+## 五、落地对照（截至 M2，2026-10-07）
 
 | 本文件的约定 | 代码落点 | 由哪条测试守住 |
 |---|---|---|
 | 三态核对状态 | `ruleset/status.py`（`pending/located/verified` + 夹具档 `fixture`） | `tests/test_ruleset_status.py` |
 | 每格系数登记来源 | `rulesets/base-jtg5210-2018.json` 的 `basis` + `register_ref` | `tests/test_ruleset_builtin.py` |
 | 真值文件列约定 | `bench/generator.py` 的 `TRUTH_COLUMNS`（单点定义） | `tests/test_m1_generator.py`（位级一致 + manifest 自描述） |
-| 真值评分四列不出数 | `generator._score_truth` + `_numeric_truth_probe` | `test_truth_score_columns_refuse_to_emit_numbers` |
+| 真值评分四列不出数（内置包） | `generator._score_truth` + `_numeric_truth_probe` | `test_truth_score_columns_refuse_to_emit_numbers`、`test_cement_truth_stays_pending_under_the_asphalt_fixture` |
+| 数值真值由评定引擎产生（M2 接线） | `generator._numeric_truth_probe` → `pci.engine.compute_pci` | `test_truth_probe_delegates_to_the_assessment_engine`（spy 证明被调用）、`test_truth_columns_are_numeric_and_match_the_ledger_path`、`test_cement_fixture_produces_cement_truth` |
+| 含异常对象拒算而非跳过破损行 | `pci.engine.BLOCKING_CHECK_KINDS` + `blocking_findings` | `test_every_abnormal_object_in_the_frozen_data_is_refused` |
+| M4 两列仍点名未就位模块 | `generator.TRUTH_ENGINE_MODULES` | `test_mqi_and_action_truth_columns_stay_pending_until_m4` |
 | `injected_issue` 词汇 | `ledger/models.py` 的 `INJECTED_ISSUES` | `test_each_injected_issue_has_at_least_two_cases` |
 | 白名单形式 | `privacy.py` 的 `PATTERNS` + `WHITELIST_HINTS` | `tests/test_privacy_whitelist.py`、`test_committed_data_identifiers_all_pass_the_whitelist` |
 | 数据类别（SYNTHETIC / user） | `ledger/importer.py` 的 `DATA_CLASSES` + 文件首行标记 | `test_unmarked_file_refuses_without_declaration`、`test_mark_conflicting_with_declaration_is_refused` |
 | 固定随机种子 | `bench/rng.py` splitmix64 + 冻结向量 | `tests/test_determinism_rng.py`、`test_injections_are_seed_independent` |
-| 未核对不进评定路径 | `results.py` 拒算契约 + `cli` 系数门 + `checks` 的 `undetermined` 档 | `tests/test_results_contract.py`、`test_length_closure_never_hard_judges_while_pending` |
+| 未核对不进评定路径 | `results.py` 拒算契约 + `pci.engine` 系数门 + `cli` 系数门 + `checks` 的 `undetermined` 档 | `tests/test_results_contract.py`、`test_length_closure_never_hard_judges_while_pending`、`test_builtin_ruleset_blocks_every_object_with_numbers_all_empty` |
 | 破损字典（类型×程度×量纲） | `ledger/models.py` 的 `DISTRESS_DICTIONARY`（口径见 `plan/03` §二） | `test_distress_dictionary_is_clean_in_frozen_data_but_catches_intruders` |
 | 演示数据入仓形态 | `data/raw/*.csv` + `data/truth/*.truth.csv` + `data/raw/manifest.json` | `test_regeneration_of_committed_fixtures_is_byte_identical`、`test_manifest_digests_match_committed_fixtures` |
