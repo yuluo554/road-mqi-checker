@@ -145,9 +145,13 @@ rmqc gui --probe                                 # 桌面壳存活探针：建�
 python -m pytest                  # 守门测试
 ```
 
-免安装 exe（M6 已构建并实测，尚未随发布包提供——发布渠道要等授权后才开）：`packaging/rmqc.spec`
-一次构建产出 `dist/rmqc/rmqc.exe`（控制台，等价 `rmqc`）与 `dist/rmqc/rmqc-gui.exe`（窗口壳，等价 `rmqc gui`；
-已实测的是它的 `--probe` 形态，不带探针会进 Qt 事件循环等用户关窗）。
+免安装 exe（tag `m6` 的 release 资产）：<https://github.com/yuluo554/road-mqi-checker/releases/tag/m6>
+
+- `rmqc-cli-win64.zip`（12.3 MB，47 个文件）：`rmqc.exe` 控制台壳，解压后双击或在中立目录跑；
+- `rmqc-gui-win64.zip`（48.2 MB，194 个文件）：同包内含 `rmqc.exe` 与 `rmqc-gui.exe`（窗口壳）。
+
+两者都由 `packaging/rmqc.spec` 一次构建产出（onedir，共用一份 `_internal`）。
+`rmqc-gui.exe` 不带 `--probe` 会进 Qt 事件循环等用户关窗，已实测的是 `--probe` 形态。
 已实测的部分：把整包拷到仓库外的中立目录后，控制台 exe 跑通
 `selfcheck` / `ruleset list` / `ledger init` / `import` / `assess` / `aggregate` / `compare` /
 `report --format csv|md|docx`（内置系数包下按既有口径落 1），GUI exe 的 `--probe` 落 0；

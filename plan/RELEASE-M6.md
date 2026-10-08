@@ -54,9 +54,13 @@
 | onedir 双 exe + `packaging/rmqc.spec` `datas` 白名单 | ✅ 已构建：`dist/rmqc/rmqc.exe` + `rmqc-gui.exe` 共用一份 `_internal`，`datas` 逐条列出 27 条（12 raw + manifest + 12 truth + `data/README.md` + 内置规则集），构建期与仓库 `glob` 对账 |
 | `packaging/verify_build.py` 构建后红线断言 | ✅ 五类断言全过（回执 `.tmp_m6/verify_build.log`）：26 份内嵌数据逐份 sha256 一致且无多余、夹具字样 0、真实形态标识符越界 0、无 pdf/doc 与 >200KB 载荷、中立目录里 `data_dir` 指向包内 |
 | 中立目录（仓库外）CLI 五连 + GUI 存活探针 | ✅ 真跑：**68 步 want==got 全对**（回执 `.tmp_verify/M6/exits.tsv` + `run.log`），exe 三格式导出与源码态逐字节一致，`rmqc-gui.exe --probe` 落 0，打包态 `bench run` 落 3 |
-| CI 四矩阵首跑全绿 | ⬜ | **需 push 授权** |
-| 建仓 / push / tag / GitHub release | ⬜ | **需用户明确授权**（本轮默认只本地 commit） |
-| README「免安装 exe」段落转正 | ⬜ | exe 真做出来并验过之后才改 |
+| CI 四矩阵首跑全绿 | ✅ 已跑：**ubuntu×2 + windows×2 全绿**（run 37705116011）。首跑时 windows 两腿同点红在 `rmqc selfcheck` 的 `UnicodeEncodeError: 'charmap' codec`（runner 按 cp1252 编码 stdout），判成代码缺陷、修在 `cli.ensure_utf8_stream()`，并补两条 cp1252 诱饵门（487 → 489） |
+| 建仓 / push / tag / GitHub release | ✅ 已授权并完成：仓库 <https://github.com/yuluo554/road-mqi-checker>（push 走 SSH 通道，OAuth 令牌没有 `workflow` 档），tag `m6` + release 挂两份 exe 资产 |
+| README「免安装 exe」段落转正 | ✅ 与事实一致：段落里写的就是 release 上真实存在的两份 zip、各自体积与文件数，并写清未实测面（窗口人工交互） |
+
+**资产体积实测**：整包未压缩 119.6 MB，DEFLATE 后 48.2 MB（GitHub 单资产 100 MB 上限内）；
+只含控制台壳（剥掉 Qt 相关文件）12.3 MB。两份 zip 都过 `zipfile.testzip()`。
+打包态的 exe 导出与源码态逐字节一致（`a9ed3245269f5a31` / `6b5acd6211d8aede` / `7cc9b7c0a6a1e495` / `8f7f38553c25339f`）。
 
 **决定与理由（不留悬案）**：
 1. 提交邮箱不改写 —— 全历史只有一条 GitHub noreply 身份，本身即公开身份，无个人信息泄漏面；
