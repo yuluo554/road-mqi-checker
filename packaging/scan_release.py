@@ -30,7 +30,7 @@ BIN_SUFFIXES = (".png", ".jpg", ".jpeg", ".ico", ".pdf", ".zip", ".gz", ".xlsx",
 #: 字面扫描规则：名称 → (正则, 是否算违规的判定)
 LITERAL_CHECKS = (
     # `git@github.com:...` 是 SSH 远程形态（M6 发布实录用的就是它），不是可投递地址：
-    # 邮箱类规则只管「用户@主机.顶级域」，别把 git 通道当成 PII。
+    # 邮箱类规则只管「用户名 + at 符 + 主机与顶级域」这种可投递形态，别把 git 通道当成 PII。
     ("邮箱（非 GitHub noreply）", re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"),
      lambda v: "noreply.github.com" not in v and not v.startswith("git@")),
     ("手机号 11 位（白名单外）", re.compile(r"(?<!\d)1[3-9]\d{9}(?!\d)"), lambda v: not PATTERNS["phone"].match(v)),
