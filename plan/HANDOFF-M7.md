@@ -63,14 +63,18 @@
 
 ## 二、M7 待办（全是对外动作或可选增强，**做之前先问用户**）
 
-1. **建仓 + push**（唯一未做的收口动作）：仓库至今无 remote。用户点头后
-   `git remote add origin … && git push -u origin main`；注意令牌 scope 只有 `repo`，
-   推 `.github/workflows/*` 若被拒则改 SSH 通道（既有项目实录）。
-2. **CI 四矩阵首跑**：workflow 已存在（ubuntu/windows × 3.8/3.12，只装 `.[dev]` ⇒
-   4 项 GUI 标记测试在 CI 上声明式跳过）。跑绿后把结果写进 `plan/RELEASE-M6.md`；
-   若想让 CI 也跑 GUI 通路，需要加 `[gui]` + offscreen 与系统依赖，那是**新增口径**，先与用户确认。
-3. **tag + GitHub release + 免安装 exe 资产**：README 现在的说法是"已构建并实测，尚未随发布包提供"，
-   真上传 zip 资产后才能改这句话。资产体积 ~115 MB，可能超过 release 单文件软限，要先确认渠道。
+1. **建仓 + push** ✅ 已完成（用户授权）：<https://github.com/yuluo554/road-mqi-checker>，已转为 public。
+   实测：OAuth 令牌 scope 只有 `repo`（没有 `workflow`），HTTPS 推 workflow 文件会被拒 ——
+   走 SSH 通道一次过（`git remote add origin git@github.com:yuluo554/road-mqi-checker.git`）。
+2. **CI 四矩阵首跑** ✅ 全绿（ubuntu/windows × 3.8/3.12）。首跑 windows 两腿报出真缺陷
+   （cp1252 代码页下中文结论抛 `UnicodeEncodeError`），修在 `cli.ensure_utf8_stream()` 并补两条诱饵门，
+   结果与判据已写进 `plan/RELEASE-M6.md` §三。CI 仍只装 `.[dev]` ⇒ 4 项 GUI 标记测试声明式跳过；
+   要让 CI 也跑 GUI 通路需加 `[gui]` + offscreen 与系统依赖，属**新增口径**，先与用户确认。
+3. **tag + GitHub release + 免安装 exe 资产** ✅ tag `m6` + release
+   <https://github.com/yuluo554/road-mqi-checker/releases/tag/m6>：
+   `rmqc-cli-win64.zip` 12.3 MB（47 文件）与 `rmqc-gui-win64.zip` 48.2 MB（194 文件）。
+   实测纠正了"115 MB 超上限"的担心：DEFLATE 后 48.2 MB，单资产 100 MB 限内；
+   发布前 `verify_build.py` 与 `zipfile.testzip()` 都在这两份资产对应的包上跑过。
 4. **桌面窗口的人工验收**：`--probe` 只证明"窗口能建、七页都转到内核"。真实双击、文件选择对话框、
    长任务下的界面响应需要人工过一遍，结论如实写进 `plan/07`（未做就别写"已验证"）。
 5. **可选增强**（都不影响交付判据）：省份规则集（先补 `applies_to` 的技术等级维）、
