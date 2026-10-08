@@ -9,7 +9,7 @@
 
 | 项 | 实测值 | 复核命令 |
 |---|---|---|
-| 提交 | 本地 main 一串 M0→M6 提交，**无 remote、未 push**；工作树只剩不属于本项目的未跟踪 `.qoder-credits/` | `git log --oneline -6` / `git status --porcelain` |
+| 提交 | `origin/main` = `fa303e2`，tag `m6`（指向 `1ac8093`，代码与两份资产对应的状态）已推送；仓库 **public**：<https://github.com/yuluo554/road-mqi-checker>；工作树只剩不属于本项目的未跟踪 `.qoder-credits/` | `git log --oneline -6` / `git status --porcelain` / `gh run list --limit 1` |
 | 测试 | **489 项**（M6 净增 79：486→487 是冻结态落点门，488–489 是 Windows CI 报出来的两条 locale 门），py3.8.8 与 py3.12.10 双通道各 489 collected / 489 passed / 0 skip / 0 warning | `PYTHONDONTWRITEBYTECODE=1 py -3.8 -X utf8 -m pytest tests -q` |
 | 占位符 | 登记表 **空**（终态），`_meta.MILESTONE = "M6"`，`MILESTONE_DOCS["M6"] = plan/07` 且该文件真实存在（有门） | `rmqc --json selfcheck` 的 `placeholders` |
 | 命令面 | **没有任何命令返回 3**；`version/selfcheck/ruleset/ledger/import/assess/aggregate/compare/bench/report/gui` 全部真跑 | `tests/test_cli_contract.py::test_no_command_in_the_surface_returns_the_unimplemented_code` |
@@ -111,8 +111,8 @@ M0–M6 累计见 `plan/02` §9 第 1–35 条。M7 最相关的：三态 + `fix
 
 ## 五、DoD（M7 完成判据）
 
-- [ ] 用户授权后：建仓 + push + CI 四矩阵首跑全绿，结果写进 `plan/RELEASE-M6.md`
-- [ ] tag + release + README 状态行与"免安装 exe 资产"说法与事实一致（资产真上传才改）
+- [x] 用户授权后：建仓 + push + CI 四矩阵首跑全绿 ✅（含 windows 两腿报出的 cp1252 缺陷修复与两条诱饵门，实录在 `plan/RELEASE-M6.md` §三/§四）
+- [x] tag + release + README 与"免安装 exe 资产"说法一致 ✅（两份资产 `gh release download` 取回后 sha256 与原件相符）
 - [ ] 桌面窗口人工验收一遍并如实记录（或明确记为"未做人工验收"）
 - [ ] M6 末态基线表逐项未回退（489 项、68 步 want==got、导出逐字节一致、脱敏四步 0 未豁免）
 - [ ] 若新增功能：先登记 `plan/02` §9 与 `plan/00` 决策，再动代码，并配常驻门
