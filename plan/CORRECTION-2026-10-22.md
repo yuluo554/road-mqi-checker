@@ -126,3 +126,32 @@ $ python -m pytest tests/ -q
 2. **`plan/RELEASE-M6.md` 与 `plan/HANDOFF-M7.md` 里的「12.3 MB / 47 文件」未改**：
    那是 tag 时点的历史事实，按本仓纪律不改写历史；以本文件为更正依据。
 3. **桌面壳窗口交互仍未人工目检**（探针层级之外），这一条从 M6 起就登记着，本次未变。
+
+---
+
+## 五、追加（同日第二批）：自述测试计数漂移 + 补自指守门
+
+### D3【P2】README 的测试项数没有门盯着，每加测试就漂一次
+
+- **实测**：本次修复前 README 两处写「489 项」；新增 `test_cli_zip_shape.py`（5 项）后实测
+  **490 passed + 4 skipped = 494 collected**；再加本批的计数守门自身后为
+  **491 passed + 4 skipped = 495 collected**。
+- **根因**：仓内**没有任何门**断言"README 自述计数 == 实际收集数"。本仓其他地方
+  （`bench run` 指标表）有 `test_readme_metric_table_is_generated_from_bench_run` 做逐行对账，
+  唯独测试计数这一处没有。
+
+### 修复
+
+| 动作 | 说明 |
+|---|---|
+| 同步 README | 两处「489」→「495 收集 / 490 通过 / 4 项声明式跳过」 |
+| 新增自指守门 | `tests/test_readme_test_count.py` —— 解析 `pytest --collect-only` 的收集数，断言与 README 的 `N 项守门测试`、`各收集 N 项` 两处句式都相等 |
+
+**门禁自身已验红**：把 README 留在 490 而实际收集 495 时，该门报
+`AssertionError: README 自述 490 项，实际收集 495 项`，退出码非 0 —— 证明它不是恒绿的空门。
+
+### 顺带修掉的一处
+
+`README.md` 曾被我用 Python 写回时整文件转成 CRLF（317 处），触发既有门
+`test_gates_eol.py::test_tracked_text_files_have_no_cr`。已归一为 LF；
+`git diff` 实际内容差异仅 2 行（`--ignore-cr-at-eol` 复核）。
