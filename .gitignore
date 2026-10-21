@@ -53,3 +53,6 @@ data/local/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Qoder 编辑器自动生成的目标画布缓存（19 个 .canvas.tsx，非项目内容）
+.qoder-credits/
