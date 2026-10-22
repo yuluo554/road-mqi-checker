@@ -214,7 +214,7 @@ def build_window(QtWidgets, on_run=None):
     """
     runner = on_run or (lambda spec, values: run_kernel(build_argv(spec, values)))
     window = QtWidgets.QMainWindow()
-    window.setWindowTitle("公路技术状况评定与养护决策支持工具（离线内核）")
+    window.setWindowTitle("公路技术状况评定框架（离线内核）")
     tabs = QtWidgets.QTabWidget()
     window.setCentralWidget(tabs)
     window.pages = []

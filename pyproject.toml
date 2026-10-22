@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "road-mqi-checker"
 version = "0.0.0"
-description = "公路技术状况评定与养护决策支持工具（全离线、规则优先、可复算）"
+description = "公路技术状况评定框架：带拒算契约的规则内核（全离线、规则优先、可复算）"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }

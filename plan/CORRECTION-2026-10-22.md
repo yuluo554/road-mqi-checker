@@ -72,7 +72,7 @@ python packaging/pack_cli_zip.py <gui.zip> <out-cli.zip>
 ### 2.3 重建 cli 资产
 
 ```
-旧：rmqc-cli-win64.zip  12,865,367 B  47 条目  sha256 d051758564185744321d481eda7b89e74e45a38b18d90e3f646e20ca7876847b
+旧：rmqc-cli-win64.zip  12,865,367 B  47 条目  sha256 d0517585…06847b
 新：rmqc-cli-win64.zip  11,122,875 B  46 条目  sha256 0a76abaa13c854e6a82b817bbb96779db3f1ddc174036f002fe181ec44706783
      （= 旧包剔除 rmqc-gui.exe 一个条目，其余 46 条逐字节保留）
 ```

@@ -51,7 +51,7 @@ def build_parser():
     # type: () -> argparse.ArgumentParser
     parser = argparse.ArgumentParser(
         prog="rmqc",
-        description="公路技术状况评定与养护决策支持工具（离线内核 CLI）",
+        description="公路技术状况评定框架：带拒算契约的离线内核 CLI",
     )
     parser.add_argument("--db", default=None, help="SQLite 台账路径；省略时用内存库（不落盘）")
     parser.add_argument("--json", action="store_true", dest="as_json", help="以 JSON 输出")
