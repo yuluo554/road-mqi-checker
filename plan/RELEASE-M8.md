@@ -46,7 +46,7 @@ EXIT=0
 |---|---|---|---|
 | `rmqc-cli-win64.zip` | **46** | **11,124,206** | `3d363a4a…78306` |
 | `rmqc-gui-win64.zip` | **197** | **51,467,996** | `ef3a441b…69e8d` |
-| `SHA256SUMS` | 2 行 | 186 | （逐附件文件名 + 摘要，无 `*`、两空格、单 LF） |
+| `SHA256SUMS` | 2 行 | 170 | （`sha256sum -c` 实测两行均 OK；无 `*`、两空格、单 LF） |
 
 > 完整 sha256 见 Release 说明与 `SHA256SUMS` 附件；本文档按 M6 教训**不写完整哈希字面量**
 > （避免与脱敏门的身份证形态规则自撞）。
@@ -84,10 +84,49 @@ report 产物 r.md = 11,283 B   ← 与源码态导出字节数一致
 
 ## 四、tag 与 Release
 
-- tag：`m6.3`（annotated），指向本轮提交；`m6` / `m6.1` / `m6.2` **一律不动**（已公开引用，移动属改写历史）；
-- Release `m6.3`：三附件（cli / gui / `SHA256SUMS`），正文写清本轮改了什么、为什么字节变了；
+- tag：`m6.3`（annotated）→ `fb7283b`；`m6` / `m6.1` / `m6.2` **一律不动**（已公开引用，移动属改写历史）；
+- Release `m6.3`：<https://github.com/yuluo554/road-mqi-checker/releases/tag/m6.3>，三附件；
 - **`m6.3` 之后不再有 tag 移动**：若将来发现说明与产物不符，做法是 `gh release edit` 改正文，
   或新打一个 tag，不动既有 tag。
+
+### 4.1 CI
+
+run `39702530198`（push to main，`fb7283b`）：**四矩阵全绿**。
+
+| 腿 | 结果 |
+|---|---|
+| py 3.8 / windows-latest | 491 passed, 4 skipped |
+| py 3.12 / windows-latest | 491 passed, 4 skipped |
+| py 3.8 / ubuntu-latest | 491 passed, 4 skipped |
+| py 3.12 / ubuntu-latest | 491 passed, 4 skipped |
+
+四条腿的 **491 + 4 = 495** 与 README 自述、与批次 C 的算术断言完全一致——
+这正是本轮补的那条门要锁的东西，CI 在四个平台上各验了一遍。
+
+`fb7283b` 上 4 个 check-run 均为 `success`。
+
+### 4.2 三值对撞（本地 / GitHub digest / 真下载）
+
+| 资产 | 本地 sha256 | GitHub digest | `gh release download` 后 `sha256sum -c` |
+|---|---|---|---|
+| `rmqc-cli-win64.zip` | `3d363a4a…78306` | 同 | **OK** |
+| `rmqc-gui-win64.zip` | `ef3a441b…69e8d` | 同 | **OK** |
+| `SHA256SUMS` | `33ef6470…bbc2d` | 同 | （校验器本体） |
+
+### 4.3 从**下载的**资产解包复验（证明发布物本身可用）
+
+```
+$ gh release download m6.3 --dir <tmp>       # 三件全部下回
+$ sha256sum -c SHA256SUMS                    # 两行 OK，EXIT=0
+$ unzip rmqc-cli-win64.zip && cd 解包目录
+$ ./rmqc.exe --help | sed -n 3p
+公路技术状况评定框架：带拒算契约的离线内核 CLI     ← 新文案确实在发布物里
+$ ./rmqc.exe selfcheck     → 0
+$ ./rmqc.exe ruleset list  → 0
+$ ./rmqc.exe bench run     → 3    （设计）
+$ ./rmqc.exe report --year 2024 --out x.csv → 2   （拒算契约）
+$ ls rmqc-gui.exe          → 不存在（cli 包只许有控制台壳）
+```
 
 ## 五、本轮**没有**做的事（如实登记）
 
@@ -97,3 +136,13 @@ report 产物 r.md = 11,283 B   ← 与源码态导出字节数一致
 2. `scan_release.py` / `verify_build.py` **未纳入 CI**（属新增口径，需单独确认）。
    两门目前仍只在发布前手动跑。
 3. 未改 14 格 `pending` 状态、未动 `data/` 下任何 fixtures/真值/24 份 CSV/manifest。
+
+## 六、本文件的时点说明（tag 之后有文档追加）
+
+本文件的**第一版**（含 §一 两道门、§二 资产表、§三 冒烟、§四 tag/Release）随 `m6.3` 一起被打进 tag `fb7283b`。
+之后我补写了 §4.1 CI 实测、§4.2 三值对撞、§4.3 下载件解包复验（都是发布后才拿到的证据），
+并为与下载件的实际字节对齐，把 `SHA256SUMS` 的字节数从误写的 186 更正为实测的 **170**。
+
+⇒ **`m6.3..HEAD` 的差异只有本文件与 `HANDOFF-M8.md` 的文档补充，产物与代码零变化。**
+tag `m6.3` 的附件与其下载复验不受影响（附件在打 tag 之后未再上传或改动）。
+按本仓纪律，**不移动已发布的 tag**；这段滞后如实留在这里。

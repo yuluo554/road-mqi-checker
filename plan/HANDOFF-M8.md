@@ -1,8 +1,9 @@
-# HANDOFF · M8（批次 A/B/C 已执行，状态：待复验）
+# HANDOFF · M8（批次 A/B/C 已执行并发布 `m6.3`，状态：已发布 / 人工目检仍待做）
 
 > 用法：新对话说「继续完成 `plan/HANDOFF-M8.md`」即可续接（命令均以仓库根为当前目录）。
 > 上一棒：`plan/HANDOFF-M7.md`（M7 对外动作与可选增强）。
-> 本轮起点：`27924b1`（= tag `m6.2`，零滞后）。**本轮未 commit / 未 push / 未打 tag / 未动 Release。**
+> **本轮已发布**：tag `m6.3` → `fb7283b`，Release 三附件 + CI 四矩阵全绿（run `39702530198`）。
+> 发布回执：`plan/RELEASE-M8.md`。
 > 交接物：`update/00`–`update/02`、`update/98`、`update/99`、`update/执行记录.md`（`update/` 在 `.gitignore` 内）。
 
 ## 〇、本轮做了什么（按批次）
@@ -159,21 +160,23 @@ $ pytest tests -q            # 同一 venv 追加 [gui]
 $ git status --porcelain
  M README.md
  M plan/00-README总览.md
+ M plan/CORRECTION-2026-10-22.md
  M pyproject.toml
  M src/road_mqi_checker/__init__.py
  M src/road_mqi_checker/cli.py
  M src/road_mqi_checker/gui/app.py
  M tests/test_readme_test_count.py
-?? update/
 ?? plan/HANDOFF-M8.md
+?? plan/RELEASE-M8.md
+?? update/
 ```
 
-- **未 commit / 未 push / 未打 tag / 未动 `m6`/`m6.1`/`m6.2` 三个 tag 与其 Release**；
+- **已 commit `fb7283b` → push → tag `m6.3` → Release 三附件**，CI run `39702530198` 四矩阵全绿；
 - 未新增 `src/`/`tests/` 文件（只改既有），故无 `git add` 义务；
-- 临时产物全在 `%TEMP%\rm-b`、`%TEMP%\rm-verify`、`%TEMP%\rm-nc4`、`%TEMP%\rm-nc5` 与 `%TEMP%\rm-b-e2e-*`，
-  仓库内未新建目录。
+- 临时产物全在 `%TEMP%\rm-b`、`%TEMP%\rm-verify`、`%TEMP%\rm-nc4`、`%TEMP%\rm-nc5`、
+  `%TEMP%\rm-b-e2e-*`、`%TEMP%\rm-m63`，仓库内未新建目录。
 
-## 七、本轮新发现（未修，登记待裁）
+## 七、本轮新发现（D4，已在本轮修掉）
 
 ### D4【P2，既有缺陷，非本轮引入】`scan_release.py` 第 2 步在 HEAD 上就是红的
 
@@ -214,10 +217,11 @@ EXIT=1
 
 ## 八、下一棒建议
 
-1. **等复验方裁定本轮**（状态写「待复验」）；通过后再决定是否 commit / 发 `m6.3`。
-2. 若要把首屏表述变更固化进发布面，注意 **Release 说明是 tag 时点的副本**，
-   移动或新打 tag 后须 `gh release edit` 同步正文（本仓已有此类教训）。
-3. §四 的六项主观目检是**唯一**仍挂着的验收项；做完写进 `plan/07` 并把
-   `HANDOFF-M7.md` §五 DoD 第 4 条的 ⬜ 改成 ✅（或如实写明哪几项没做）。
-4. `plan/HANDOFF-M7.md` §五 第 5 条列的「重试 `jtst.mot.gov.cn`」在 **DEC1=B 之后已不再是待办**，
+1. **本轮已发布 `m6.3`**（`fb7283b`，CI 四矩阵全绿，三附件三值对撞一致）。
+   复验方直接对着 `plan/RELEASE-M8.md` 的实测记录重跑即可。
+2. §四 的六项主观目检是**唯一**仍挂着的验收项（用户已明确指示本轮跳过）；
+   做完写进 `plan/07` 并把 `HANDOFF-M7.md` §五 DoD 第 4 条的 ⬜ 改成 ✅（或如实写明哪几项没做）。
+3. `plan/HANDOFF-M7.md` §五 第 5 条列的「重试 `jtst.mot.gov.cn`」在 **DEC1=B 之后已不再是待办**，
    下一轮不要把它当遗留缺陷捡回来。
+4. 若将来觉得首屏表述需要再动，注意 **Release 说明是 tag 时点的副本**：
+   改产物就新打 tag，只改文字用 `gh release edit`，**不要移动已发布的 tag**。
